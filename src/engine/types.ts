@@ -27,6 +27,7 @@ export interface FieldInfo {
   /** default member initializer (AST) */
   init?: unknown;
   anonymous?: boolean;
+  mutable?: boolean;
   alignas?: number;
   // filled by layout
   offset?: number;

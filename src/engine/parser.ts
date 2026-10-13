@@ -375,7 +375,7 @@ export class Parser {
       if (!this.accept(',')) break;
     }
     this.expect(';', 'after declaration');
-    const v: VarDecl = { k: 'var', spec, decls: declarators, storage: ds.storage, constexpr: ds.constexpr, pos: startPos, alignas: ds.alignas };
+    const v: VarDecl = { k: 'var', spec, decls: declarators, storage: ds.storage, constexpr: ds.constexpr, pos: startPos, alignas: ds.alignas, mutable: ds.mutable };
     if (cx.inClass) return v;
     return v;
   }
@@ -768,7 +768,7 @@ export class Parser {
           for (const dd of x.decls) {
             if (dd.type.k === 'fn') continue;
           }
-          c.members.push({ k: 'field', decl: x, access, mutable: false, static: isStatic, alignas: x.alignas });
+          c.members.push({ k: 'field', decl: x, access, mutable: !!x.mutable, static: isStatic, alignas: x.alignas });
           break;
         }
         case 'class': c.members.push({ k: 'class', c: x, access }); break;

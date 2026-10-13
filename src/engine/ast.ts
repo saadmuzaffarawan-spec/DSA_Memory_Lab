@@ -104,6 +104,7 @@ export interface VarDecl {
   constexpr: boolean;
   pos: Pos;
   alignas?: Expr;
+  mutable?: boolean;
 }
 
 export type Stmt =
