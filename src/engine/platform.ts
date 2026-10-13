@@ -24,6 +24,8 @@ export interface Platform {
   heap: { base: number; size: number };
   stack: { top: number; size: number };
   sys: { base: number; size: number; mainReturn: number; mainReturnLabel: string };
+  /** writable data page of the C library (holds glibc's main_arena / ucrt heap globals) */
+  libc: { base: number; size: number; arena: number };
   frame: { savedFp: boolean; shadow: number };
   allocator: AllocKind;
   /** debug build behaviours (MSVC /Od + debug CRT) */
@@ -58,6 +60,7 @@ export const LINUX: Platform = {
   heap: { base: 0x5555555a5000, size: 4 * MB },
   stack: { top: 0x7ffffffff000, size: 8 * MB },
   sys: { base: 0x7ffff7c29000, size: 0x1000, mainReturn: 0x7ffff7c29d90, mainReturnLabel: '__libc_start_call_main+128' },
+  libc: { base: 0x7ffff7e1a000, size: 0x2000, arena: 0x7ffff7e1ac80 },
   frame: { savedFp: true, shadow: 0 },
   allocator: 'glibc',
   debug: false,
@@ -88,6 +91,7 @@ export const WINDOWS: Platform = {
   heap: { base: 0x000001f4b7d40000, size: 4 * MB },
   stack: { top: 0x000000c35c800000, size: 1 * MB },
   sys: { base: 0x00007ffb8a1c7000, size: 0x1000, mainReturn: 0x00007ffb8a1c7374, mainReturnLabel: 'BaseThreadInitThunk+0x14' },
+  libc: { base: 0x00007ffb8a4d0000, size: 0x2000, arena: 0x00007ffb8a4d0b40 },
   frame: { savedFp: false, shadow: 32 },
   allocator: 'ucrt',
   debug: true,
@@ -118,6 +122,7 @@ export const MACOS: Platform = {
   heap: { base: 0x00007f8d3a504000, size: 4 * MB },
   stack: { top: 0x00007ffeefc00000, size: 8 * MB },
   sys: { base: 0x00007ff80a3d9000, size: 0x1000, mainReturn: 0x00007ff80a3d9418, mainReturnLabel: 'start+1' },
+  libc: { base: 0x00007ff80a5e0000, size: 0x2000, arena: 0x00007ff80a5e0a00 },
   frame: { savedFp: true, shadow: 0 },
   allocator: 'macos',
   debug: false,
