@@ -355,6 +355,51 @@ int main() {
 `,
   },
   {
+    id: 'list', title: 'list: a doubly linked list', group: 'Containers',
+    blurb: 'Every element is its own heap node with next and prev pointers. Sorting relinks nodes; nothing is copied.',
+    code: `#include <iostream>
+#include <list>
+using namespace std;
+
+int main() {
+  list<int> l;
+  l.push_back(30);
+  l.push_back(10);
+  l.push_front(20);      // a new node in front: watch the arrows
+
+  l.sort();              // the nodes are relinked, the values never move
+  for (int x : l) cout << x << " ";
+  cout << "\\n";
+
+  auto it = l.begin();
+  ++it;
+  l.erase(it);           // one node is freed, its neighbours are joined
+  return 0;
+}
+`,
+  },
+  {
+    id: 'hashmap', title: 'unordered_map: buckets and nodes', group: 'Containers',
+    blurb: 'A hash table: an array of buckets plus a chain of nodes. Watch it grow and rehash.',
+    code: `#include <iostream>
+#include <unordered_map>
+using namespace std;
+
+int main() {
+  unordered_map<int, int> m;
+  cout << "buckets at start: " << m.bucket_count() << "\\n";
+  for (int i = 1; i <= 14; i++) {
+    m[i * 10] = i;       // the 14th insert goes over the load limit
+    cout << m.size() << " items, " << m.bucket_count() << " buckets\\n";
+  }
+  // The iteration order is NOT the insertion order: it follows the node chain.
+  for (auto& kv : m) cout << kv.first << " ";
+  cout << "\\n";
+  return 0;
+}
+`,
+  },
+  {
     id: 'smart', title: 'unique_ptr and shared_ptr', group: 'Heap',
     blurb: 'Smart pointers free memory for you. See the reference count change.',
     code: `#include <iostream>

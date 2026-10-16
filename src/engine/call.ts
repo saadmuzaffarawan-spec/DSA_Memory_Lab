@@ -203,7 +203,7 @@ export function rankConv(I: Interp, arg: V, P: Type): number | null {
       if (P.rv) return 0;
       return 1;
     }
-    if (at.k === 'cls' && target.k === 'cls' && isBaseOf(target.c, at.c)) return 3;
+    if (at.k === 'cls' && target.k === 'cls' && isBaseOf(target.c, at.c)) return 3 + (P.rv ? 0 : 0.1);
     const r = rankConv(I, arg, stripCv(target));
     // a temporary created by a conversion binds better to T&& than to const T&
     return r === null ? null : Math.max(r, 3) + (P.rv ? 0 : 0.1);
@@ -1397,7 +1397,7 @@ export function construct(I: Interp, t: Type, addr: number, args: V[], mode: Cto
   const ctors = c.x.ctors as Fn[];
   // aggregates are initialised member-wise
   if (c.x.aggregate && args.length > 0 && !ctors.some((f) => f.userProvided)) {
-    const only = args.length === 1 && args[0].k === 'l' && args[0].t.k === 'cls' && args[0].t.c === c;
+    const only = args.length === 1 && args[0].k === 'l' && args[0].t.k === 'cls' && (args[0].t.c === c || isBaseOf(c, args[0].t.c)); // a copy, or a slice of a derived object
     if (!only && args.length >= 1) {
       aggregateFromValues(I, t, addr, args);
       markBuilt(I, addr);

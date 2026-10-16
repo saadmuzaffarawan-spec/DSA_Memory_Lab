@@ -19,6 +19,8 @@ import iostream from './iostream.hpp?raw';
 import sstream from './sstream.hpp?raw';
 import limits from './limits.hpp?raw';
 import functional from './functional.hpp?raw';
+import list from './list.hpp?raw';
+import unordered from './unordered.hpp?raw';
 
 interface Chunk { src: string; deps: string[] }
 
@@ -40,6 +42,8 @@ const CHUNKS: Record<string, Chunk> = {
   memory: { src: memory, deps: ['core', 'utility', 'exception'] },
   tree: { src: tree, deps: ['core', 'utility', 'exception', 'algorithm', 'vector'] },
   limits: { src: limits, deps: ['core'] },
+  unordered: { src: unordered, deps: ['core', 'utility', 'exception', 'algorithm', 'string'] },
+  list: { src: list, deps: ['core', 'utility', 'exception', 'algorithm'] },
   functional: { src: functional, deps: ['core', 'utility', 'exception'] },
   iostream: { src: iostream, deps: ['string', 'core', 'utility', 'exception', 'cstdio', 'cstdlib', 'cstring', 'cmath', 'cctype'] },
   sstream: { src: sstream, deps: ['iostream', 'string', 'core', 'utility', 'exception', 'cstdio', 'cstdlib', 'cstring', 'cmath', 'cctype'] },
@@ -47,7 +51,7 @@ const CHUNKS: Record<string, Chunk> = {
 
 /** header name -> chunk */
 const HEADERS: Record<string, string> = {
-  algorithm: 'algorithm', numeric: 'algorithm', iterator: 'algorithm', utility: 'utility', type_traits: 'utility', functional: 'functional', tuple: 'functional', optional: 'functional',
+  algorithm: 'algorithm', numeric: 'algorithm', iterator: 'algorithm', utility: 'utility', type_traits: 'utility', functional: 'functional', tuple: 'functional', optional: 'functional', list: 'list', unordered_map: 'unordered', unordered_set: 'unordered',
   exception: 'exception', stdexcept: 'exception', new: 'exception', string: 'string', vector: 'vector', array: 'array', deque: 'deque', stack: 'deque', queue: 'deque', memory: 'memory', map: 'tree', set: 'tree',
   iostream: 'iostream', istream: 'iostream', ostream: 'iostream', iomanip: 'iostream', sstream: 'sstream', limits: 'limits',
   cstdio: 'cstdio', 'stdio.h': 'cstdio', cstdlib: 'cstdlib', 'stdlib.h': 'cstdlib', cstring: 'cstring', 'string.h': 'cstring',

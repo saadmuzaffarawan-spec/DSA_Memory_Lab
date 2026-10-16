@@ -11,7 +11,10 @@ Stackyard simulates a machine; it is not a compiler or a debugger. This page lis
 ## Language and library
 
 - C++17 subset: no threads, atomics, coroutines, modules, filesystem, network, or locale support.
-- Implemented library: `iostream`, `string`, `vector`, `array`, `deque`, `stack`, `queue`, `map`, `set` (and multi-variants), `unique_ptr`, `shared_ptr`, `weak_ptr`, `algorithm`, `numeric`, `functional` (partial), C `stdio`/`string`/`math`/`ctype`, exceptions. Not yet: `list`, `unordered_*`, `optional`, `tuple`, `variant`, `std::function`, `sstream`, `bitset`, `random`, `chrono`.
+- Implemented library: `iostream`, `iomanip`, `sstream` (`istringstream`, `ostringstream`, `stringstream`), `string`, `vector`, `array`, `deque`, `list`, `stack`, `queue`, `map`, `set` (and multi-variants), `unordered_map`, `unordered_set`, `unique_ptr`, `shared_ptr`, `weak_ptr`, `tuple`, `optional`, `function`, `limits`, `algorithm`, `numeric`, C `stdio`/`string`/`math`/`ctype`/`limits`, exceptions. Not yet: `unordered_multimap`/`multiset`, `variant`, `bind`, `bitset`, `random`, `chrono`, `regex`.
+- `unordered_map`/`unordered_set` reproduce libstdc++'s hash table exactly (bucket counts, insertion points, iteration order, string hash), verified against g++. On Windows and macOS they use the same algorithm, so iteration order and `sizeof` are **approximate** (MSVC and libc++ use different tables).
+- `std::function` always stores its callable on the heap (libstdc++ keeps small ones inside the object), so its `sizeof` and allocation pattern differ. `tuple` and `optional` follow libstdc++'s layout; the macOS layout of `tuple` is approximate.
+- `stringstream` text lives inside the simulator, not in simulated memory, so you will not see its bytes in the Memory view.
 - `long double` is a 64-bit double in the simulator's arithmetic (its size is still reported as the platform reports it). NaN sign bits are a best guess.
 - `stable_sort` uses insertion sort and `inplace_merge` is O(n²): results are right, speed and exact move counts differ from a real library.
 - Exception `what()` text on Windows and macOS is approximate.

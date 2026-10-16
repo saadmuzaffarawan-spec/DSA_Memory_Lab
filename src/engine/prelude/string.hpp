@@ -433,6 +433,8 @@ inline string operator+(string&& a, const string& b) { a.append(b); return std::
 inline string operator+(string&& a, const char* b) { a.append(b); return std::move(a); }
 inline string operator+(string&& a, char b) { a.push_back(b); return std::move(a); }
 inline string operator+(const string& a, string&& b) { b.insert(0, a); return std::move(b); }
+inline string operator+(const char* a, string&& b) { b.insert(0, a); return std::move(b); }
+inline string operator+(char a, string&& b) { b.insert(b.begin(), a); return std::move(b); }
 inline string operator+(string&& a, string&& b) { a.append(b); return std::move(a); }
 inline bool operator==(const string& a, const string& b) noexcept { return a.size() == b.size() && memcmp(a.data(), b.data(), a.size()) == 0; }
 inline bool operator==(const string& a, const char* b) { return a.compare(b) == 0; }
