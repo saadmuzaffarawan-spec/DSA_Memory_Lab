@@ -47,6 +47,8 @@ export interface MemberHit {
 export function baseOffsetOf(I: Interp, cls: ClassInfo, base: ClassInfo): number | null {
   if (cls === base) return 0;
   const L = I.layoutOf(cls);
+  const direct = L.vbaseOffsets.get(base);
+  if (direct !== undefined) return direct;
   for (const b of cls.bases) {
     if (b.virtual) {
       const vo = L.vbaseOffsets.get(b.cls);
@@ -90,7 +92,7 @@ export function findMember(I: Interp, cls: ClassInfo, name: string): MemberHit |
       if (b.virtual) seen.add(b.cls);
       let bo: number;
       if (b.virtual) bo = baseOffsetOf(I, cls, b.cls) ?? 0;
-      else bo = off + (I.layoutOf(c) && (b.offset ?? 0));
+      else { if (!c.layout && !c.x.completing) I.layoutOf(c); bo = off + (b.offset ?? 0); }
       if (visit(b.cls, bo)) found = true;
     }
     return found;

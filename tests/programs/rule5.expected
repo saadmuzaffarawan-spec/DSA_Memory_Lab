@@ -1,0 +1,3 @@
+ctor(hello) copy(hello) move assign ctor(tmp) massign dtor(null) 
+hello tmp|
+dtor(tmp) dtor(hello) dtor(null) 

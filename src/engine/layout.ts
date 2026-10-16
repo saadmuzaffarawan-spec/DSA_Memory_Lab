@@ -31,7 +31,7 @@ export function layoutOf(c: ClassInfo): Layout {
   if (c.layout) return c.layout;
   if (!c.x.completed && c.x.ensure) { c.x.ensure(); if (c.layout) return c.layout; }
   const l = c.plat.abi === 'msvc' ? layoutMsvc(c) : layoutItanium(c);
-  c.layout = l;
+  if (!c.x.completing) c.layout = l;
   return l;
 }
 
@@ -302,7 +302,6 @@ function layoutItanium(c: ClassInfo): Layout {
     size, align, nvsize: nvsizeBytes, nvalign, dsize: Math.ceil(dataBits / 8), dynamic, empty,
     vptrOffset, vbptrOffset: null, vbaseOffsets, padding: [], explicitAlign: explicit || undefined,
   };
-  c.layout = lay;
   lay.padding = paddingFrom(size, coveredSpans(c, { vptr: vptrOffset, vbptr: null }).concat(virtualSpans(vbaseOffsets)));
   return lay;
 }
@@ -449,7 +448,6 @@ function layoutMsvc(c: ClassInfo): Layout {
   if (size === 0) size = 1;
   size = alignTo(size, align);
   const lay: Layout = { size, align, nvsize, nvalign, dsize: size, dynamic: isDynamic(c), empty, vptrOffset, vbptrOffset, vbaseOffsets, padding: [], explicitAlign: explicit || undefined };
-  c.layout = lay;
   lay.padding = paddingFrom(size, coveredSpans(c, { vptr: vptrOffset, vbptr: vbptrOffset }).concat(virtualSpans(vbaseOffsets)));
   return lay;
 }

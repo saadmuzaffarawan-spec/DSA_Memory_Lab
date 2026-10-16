@@ -70,7 +70,7 @@ function numLit(I: Interp, e: Extract<A.Expr, { k: 'num' }>): V {
   const ll = suf.includes('ll');
   const l = !ll && suf.includes('l');
   const all = decimal
-    ? (u ? [T.uint, T.ulong, T.ullong] : ll ? [T.llong] : l ? [T.long, T.llong] : [T.int, T.long, T.llong])
+    ? (u ? (ll ? [T.ullong] : l ? [T.ulong, T.ullong] : [T.uint, T.ulong, T.ullong]) : ll ? [T.llong] : l ? [T.long, T.llong] : [T.int, T.long, T.llong])
     : (u ? (ll ? [T.ullong] : l ? [T.ulong, T.ullong] : [T.uint, T.ulong, T.ullong])
       : ll ? [T.llong, T.ullong] : l ? [T.long, T.ulong, T.llong, T.ullong] : [T.int, T.uint, T.long, T.ulong, T.llong, T.ullong]);
   for (const t of all) {
@@ -449,14 +449,14 @@ function evalBinary(I: Interp, e: Extract<A.Expr, { k: 'bin' }>): V {
 
 export function classToScalar(I: Interp, v: V): V {
   if (v.k !== 'l' || v.t.k !== 'cls') return v;
-  const conv = findConversionFn(I, v, null);
+  const conv = findConversionFn(I, v, null, true);
   if (!conv) I.cerr(`'${v.t.c.name}' cannot be used as a number or truth value: it has no conversion operator`);
   return invokeFn(I, conv, v, [], undefined);
 }
 
 export function condValue(I: Interp, v: V): boolean {
   if (v.k === 'l' && v.t.k === 'cls') {
-    const conv = findConversionFn(I, v, I.T.bool);
+    const conv = findConversionFn(I, v, I.T.bool, true);
     if (!conv) I.cerr(`cannot convert '${v.t.c.name}' to bool: add an operator bool`);
     return I.isTrue(invokeFn(I, conv, v, [], undefined));
   }

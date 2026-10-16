@@ -209,7 +209,7 @@ export function rankConv(I: Interp, arg: V, P: Type): number | null {
   }
   if (A0.k === 'cls') {
     // class -> scalar via conversion operator
-    return findConversionFn(I, arg, P0, true) ? 4 : null;
+    return findConversionFn(I, arg, P0) ? 4 : null;
   }
   if (sameType(P0, A0, true)) return at.const !== P.const && P0.k === 'ptr' ? 0 : 0;
   if (P0.k === 'ptr') {
@@ -267,11 +267,11 @@ function userConvertible(I: Interp, arg: V, P: Extract<Type, { k: 'cls' }>): boo
       if (r !== null && r <= 3) return true;
     }
   }
-  return !!findConversionFn(I, arg, P, true);
+  return !!findConversionFn(I, arg, P);
 }
 
 /** a conversion operator of the argument's class that yields `target` (or any scalar when target is null) */
-export function findConversionFn(I: Interp, arg: V, target: Type | null, probe = false): Fn | null {
+export function findConversionFn(I: Interp, arg: V, target: Type | null, explicitOk = false): Fn | null {
   const t = valueType(arg);
   if (!t || t.k !== 'cls') return null;
   I.completeClass(t.c);
@@ -281,11 +281,10 @@ export function findConversionFn(I: Interp, arg: V, target: Type | null, probe =
   let best: Fn | null = null;
   for (const f of all) {
     if (f.isDeleted) continue;
-    if (!probe && f.isExplicit && target !== null && target.k !== 'bool') continue;
+    if (f.isExplicit && !explicitOk) continue;
     const s = getSig(I, f);
     const r = s.ret;
     if (target === null) { if (isInt(r) || isFloat(r) || r.k === 'ptr') { best = best ?? f; } continue; }
-    if (f.isExplicit && !(target.k === 'bool')) continue;
     const rb = stripCv(r.k === 'ref' ? r.to : r);
     const tb = stripCv(target);
     if (sameType(rb, tb, true)) return f;

@@ -237,11 +237,6 @@ export class Interp {
         this.mem.storeInt(a, 8, x.v, what);
         return;
       }
-      case 'ref': {
-        if (x.k === 'l') this.mem.storeInt(a, 8, BigInt(x.a), 'reference');
-        else this.cerr('cannot bind a reference to this value');
-        return;
-      }
       default: this.cerr('internal: store of non-scalar type');
     }
   }
