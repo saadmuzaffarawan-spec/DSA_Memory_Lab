@@ -46,11 +46,11 @@ class vector {
 
   void _init_empty() {
 #if defined(_WIN32)
-    _Myproxy = ::operator new(16);
+    _Myproxy = __typed_new<_Container_proxy>(1);
 #endif
     SY_B = 0; SY_E = 0; SY_C = 0;
   }
-  static T* _alloc(size_t n) { return n ? static_cast<T*>(::operator new(n * sizeof(T))) : static_cast<T*>(0); }
+  static T* _alloc(size_t n) { return n ? __typed_new<T>(n) : static_cast<T*>(0); }
   void _release() { if (SY_B) { ::operator delete(SY_B); } SY_B = 0; SY_E = 0; SY_C = 0; }
   void _fail_length(const char* where) const { throw length_error(where); }
 

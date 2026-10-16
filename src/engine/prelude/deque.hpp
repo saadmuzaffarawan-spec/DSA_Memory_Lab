@@ -74,8 +74,8 @@ class deque {
   size_t _pad; size_t _pad2;
   static size_t _bs() { return sizeof(T) < 256 ? 4096 / sizeof(T) : 16; }
 #endif
-  T** _alloc_map(size_t n) { T** m = static_cast<T**>(::operator new(n * sizeof(T*))); for (size_t i = 0; i < n; ++i) m[i] = 0; return m; }
-  static T* _alloc_block() { return static_cast<T*>(::operator new(_bs() * sizeof(T))); }
+  T** _alloc_map(size_t n) { T** m = __typed_new<T*>(n); for (size_t i = 0; i < n; ++i) m[i] = 0; return m; }
+  static T* _alloc_block() { return __typed_new<T>(_bs()); }
   void _grow_map() {
     size_t inc = _Mapsize == 0 ? 8 : _Mapsize;
     size_t nsz = _Mapsize + inc;
@@ -90,7 +90,7 @@ class deque {
   }
   void _init() {
 #if defined(_WIN32)
-    _Myproxy = ::operator new(16);
+    _Myproxy = __typed_new<_Container_proxy>(1);
 #endif
     _Map = 0; _Mapsize = 0; _Myoff = 0; _Mysize = 0;
   }
@@ -295,8 +295,8 @@ class deque {
   iterator _M_start;
   iterator _M_finish;
   static size_t _bufsz() { return sizeof(T) < 512 ? 512 / sizeof(T) : 1; }
-  static T* _alloc_node() { return static_cast<T*>(::operator new(_bufsz() * sizeof(T))); }
-  static T** _alloc_map(size_t n) { return static_cast<T**>(::operator new(n * sizeof(T*))); }
+  static T* _alloc_node() { return __typed_new<T>(_bufsz()); }
+  static T** _alloc_map(size_t n) { return __typed_new<T*>(n); }
   void _init_map(size_t num_elements) {
     size_t num_nodes = num_elements / _bufsz() + 1;
     _M_map_size = 8 > num_nodes + 2 ? 8 : num_nodes + 2;

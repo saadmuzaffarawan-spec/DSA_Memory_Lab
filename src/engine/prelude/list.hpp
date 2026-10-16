@@ -50,11 +50,11 @@ class list {
   size_t& _sz() { return _Mysize; }
   size_t _sz() const { return _Mysize; }
   void _init() {
-    _Myproxy = 0;
-    _Myhead = static_cast<__list_node_base*>(::operator new(sizeof(_Node)));
+    _Myproxy = __typed_new<_Container_proxy>(1);
+    _Myhead = static_cast<__list_node_base*>(static_cast<void*>(__typed_new<_Node>(1)));
     _Myhead->_next = _Myhead; _Myhead->_prev = _Myhead; _Mysize = 0;
   }
-  void _release() { ::operator delete(_Myhead); }
+  void _release() { ::operator delete(_Myhead); ::operator delete(_Myproxy); }
 #else
   __list_node_base _M_node;  // the sentinel is part of the list object
   size_t _M_size;
@@ -71,7 +71,7 @@ class list {
     return n;
   }
   template <class... A> __list_node_base* _make(__list_node_base* pos, A&&... a) {
-    _Node* n = static_cast<_Node*>(::operator new(sizeof(_Node)));
+    _Node* n = __typed_new<_Node>(1);
     ::new (static_cast<void*>(&n->_val)) T(std::forward<A>(a)...);
     return _link(pos, n);
   }

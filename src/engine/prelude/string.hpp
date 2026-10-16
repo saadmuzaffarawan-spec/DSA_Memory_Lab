@@ -29,7 +29,7 @@ class string {
   size_t _len() const { return _Mysize; }
   size_t _cap() const { return _Myres; }
   void _setlen(size_t n) { _Mysize = n; _ptr()[n] = '\0'; }
-  void _init() { _Myproxy = ::operator new(16); _Mysize = 0; _Myres = 15; _Bx._Buf[0] = '\0'; }
+  void _init() { _Myproxy = __typed_new<_Container_proxy>(1); _Mysize = 0; _Myres = 15; _Bx._Buf[0] = '\0'; }
   static size_t _grown(size_t req, size_t old) {
     size_t masked = req | 15;
     size_t geo = old + old / 2;
@@ -88,7 +88,7 @@ class string {
 
   // make room for `cap` characters (+ terminator) while keeping the first `keep` characters
   void _reserve_keep(size_t cap, size_t keep) {
-    char* np = static_cast<char*>(::operator new(cap + 1));
+    char* np = __typed_new<char>(cap + 1);
     if (keep) memcpy(np, _ptr(), keep);
     np[keep] = '\0';
     _free_heap();
@@ -98,7 +98,7 @@ class string {
     _init();
     if (n > _cap()) {
       size_t cap = _ctor_cap(n);
-      char* np = static_cast<char*>(::operator new(cap + 1));
+      char* np = __typed_new<char>(cap + 1);
       _adopt(np, cap);
     }
     if (n) memcpy(_ptr(), s, n);
@@ -123,7 +123,7 @@ class string {
       _setlen(nl);
     } else {
       size_t cap = _grown(nl, _cap());
-      char* np = static_cast<char*>(::operator new(cap + 1));
+      char* np = __typed_new<char>(cap + 1);
       if (pos) memcpy(np, _ptr(), pos);
       if (len2) memcpy(np + pos, s, len2);
       if (tail) memcpy(np + pos + len2, _ptr() + pos + len1, tail);
@@ -151,7 +151,7 @@ class string {
   string() { _init(); }
   string(const char* s) { _construct(s, strlen(s)); }
   string(const char* s, size_t n) { _construct(s, n); }
-  string(size_t n, char c) { _init(); if (n > _cap()) { size_t cap = _ctor_cap(n); _adopt(static_cast<char*>(::operator new(cap + 1)), cap); } memset(_ptr(), c, n); _setlen(n); }
+  string(size_t n, char c) { _init(); if (n > _cap()) { size_t cap = _ctor_cap(n); _adopt(__typed_new<char>(cap + 1), cap); } memset(_ptr(), c, n); _setlen(n); }
   string(const string& o) { _construct(o._ptr(), o._len()); }
   string(const string& o, size_t pos, size_t n = npos) { o._range_check(pos, "basic_string::basic_string"); size_t m = o._len() - pos; if (n < m) m = n; _construct(o._ptr() + pos, m); }
   string(string&& o) noexcept {
@@ -168,7 +168,7 @@ class string {
   template <class It, class = typename enable_if<!is_integral<It>::value>::type> string(It first, It last) {
     size_t n = 0; for (It i = first; i != last; ++i) ++n;
     _init();
-    if (n > _cap()) { size_t cap = _ctor_cap(n); _adopt(static_cast<char*>(::operator new(cap + 1)), cap); }
+    if (n > _cap()) { size_t cap = _ctor_cap(n); _adopt(__typed_new<char>(cap + 1), cap); }
     size_t k = 0; for (; first != last; ++first) _ptr()[k++] = *first;
     _setlen(n);
   }

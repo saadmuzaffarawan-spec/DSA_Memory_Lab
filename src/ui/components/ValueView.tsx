@@ -20,7 +20,7 @@ const STATE_WORD: Record<number, string> = {
 };
 
 function title(v: Value): string {
-  return `${v.label} · ${v.type || 'padding'}\n${hexAddr(v.addr)} · ${v.size} byte${v.size === 1 ? '' : 's'}\n${STATE_WORD[v.state] ?? ''}`;
+  return `${v.label} · ${v.type || 'padding'}${v.via ? ` (from base ${v.via})` : ''}\n${hexAddr(v.addr)} · ${v.size} byte${v.size === 1 ? '' : 's'}\n${STATE_WORD[v.state] ?? ''}`;
 }
 
 function Leaf({ v, ctx }: { v: Value; ctx: ValueCtx }) {

@@ -102,7 +102,7 @@ class __hashtable : private Hash, private Eq {
   size_t _bkt_of(__ht_node_base* n) const { return _code_of(n) % _M_bucket_count; }
 
   template <class... A> _Node* _make_node(A&&... a) {
-    _Node* n = static_cast<_Node*>(::operator new(sizeof(_Node)));
+    _Node* n = __typed_new<_Node>(1);
     n->_M_nxt = 0;
     ::new (static_cast<void*>(&n->_M_v)) V(std::forward<A>(a)...);
     return n;
@@ -140,7 +140,7 @@ class __hashtable : private Hash, private Eq {
   void _rehash(size_t n) {
     __ht_node_base** nb;
     if (n == 1) { _M_single_bucket = 0; nb = &_M_single_bucket; }
-    else { nb = static_cast<__ht_node_base**>(::operator new(n * sizeof(__ht_node_base*))); for (size_t i = 0; i < n; ++i) nb[i] = 0; }
+    else { nb = __typed_new<__ht_node_base*>(n); for (size_t i = 0; i < n; ++i) nb[i] = 0; }
     __ht_node_base* p = _M_before_begin._M_nxt;
     _M_before_begin._M_nxt = 0;
     size_t bbegin = 0;

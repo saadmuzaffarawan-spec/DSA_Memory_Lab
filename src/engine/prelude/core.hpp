@@ -93,3 +93,12 @@ template <class T> const T* begin(initializer_list<T> il) { return il.begin(); }
 template <class T> const T* end(initializer_list<T> il) { return il.end(); }
 }
 #define offsetof(T, m) ((size_t)&(((T*)0)->m))
+
+// Library allocations are typed for the visualiser: __tag(p, n) records that the heap block at p holds n objects of p's type.
+void* operator new(size_t);
+namespace std {
+void __tag(...);
+// MSVC's debug-iterator bookkeeping block, allocated by every container in a Debug build
+struct _Container_proxy { const void* _Mycont; void* _Myfirstiter; };
+template <class T> inline T* __typed_new(size_t n) { T* p = static_cast<T*>(::operator new(n * sizeof(T))); __tag(p, n); return p; }
+}

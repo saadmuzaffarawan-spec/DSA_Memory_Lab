@@ -18,6 +18,8 @@ export interface Value {
   children?: Value[];
   /** a decoded C string preview for char pointers/arrays */
   preview?: string;
+  /** set when the field is inherited from a base class */
+  via?: string;
 }
 
 const hex = (n: number | bigint) => '0x' + n.toString(16);
@@ -155,6 +157,12 @@ export function decode(node: TypeNode, addr: number, rp: Replay, label: string, 
         if (p.kind === 'vptr' || p.kind === 'vbptr') {
           const raw = rp.read(addr + p.off, 8);
           kids.push({ label: p.kind, type: 'pointer to ' + (p.kind === 'vptr' ? 'vtable' : 'vbase table'), addr: addr + p.off, size: 8, text: hex(readUInt(raw)), state: dominantState(rp.states(addr + p.off, 8)), kind: 'pointer', ptr: Number(readUInt(raw)) });
+          continue;
+        }
+        if (p.kind === 'base' && p.type && depth < 4) {
+          // a base subobject is shown inline: its fields are the derived object's own, at the same addresses
+          const sub = decode(p.type, addr + p.off, rp, p.label, depth + 1);
+          for (const k of sub.children ?? []) kids.push(k.kind === 'pad' ? k : { ...k, via: p.label });
           continue;
         }
         if (p.type && depth < 4) kids.push(decode(p.type, addr + p.off, rp, p.label, depth + 1));

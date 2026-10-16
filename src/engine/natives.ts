@@ -8,7 +8,7 @@ import { formatPrintf, fmtExp, fmtFixed, fmtG, nonFinite, pointerText } from './
 import { S } from './trace';
 import { sizeOf } from './layout';
 import { throwStd } from './expr';
-import type { Type } from './types';
+import { arrOf, type Type } from './types';
 
 type NT = NativeFn;
 
@@ -629,6 +629,19 @@ export function registerNatives(I: Interp) {
     return ret.cptr(buf);
   });
   reg('std::__lastInputLen', (I2) => ret.sz(new TextEncoder().encode(I2.lastLine).length));
+
+  // ---- typing of library allocations: __tag(p, n) says "this heap block holds n objects of p's pointee type" ----
+  reg('std::__tag', (I2, a) => {
+    const p = I2.rv(a[0]);
+    if (p.k !== 'i' || p.t.k !== 'ptr') return ret.void();
+    const addr = Number(p.v);
+    const n = intOf(I2, a[1]);
+    const rec = I2.heap.live.get(addr);
+    const to = p.t.to;
+    if (!rec || to.k === 'void' || n < 1) return ret.void();
+    I2.typeInfo[rec.id] = I2.typeNodeOf(n === 1 ? to : arrOf(to, n));
+    return ret.void();
+  });
 
   // ---- in-memory streams: istringstream / ostringstream / stringstream share one text buffer per id ----
   reg('std::__ss_new', (I2) => { const id = I2.nextSid++; I2.sstreams.set(id, { text: '', pos: 0 }); return ret.int(id); });

@@ -321,7 +321,7 @@ class __rb_tree
     return y;
   }
 
-  link_type _new_node_raw() { return static_cast<link_type>(static_cast<void*>(::operator new(sizeof(node_type)))); }
+  link_type _new_node_raw() { return static_cast<link_type>(static_cast<void*>(__typed_new<node_type>(1))); }
   template <class... Args> link_type _create_node(Args&&... args) {
     link_type n = _new_node_raw();
 #if defined(_WIN32)
@@ -334,7 +334,7 @@ class __rb_tree
 
   void _init() {
 #if defined(_WIN32)
-    _Myproxy = ::operator new(16);
+    _Myproxy = __typed_new<_Container_proxy>(1);
     _Myhead = _new_node_raw();
     _Myhead->left = _Myhead; _Myhead->parent = _Myhead; _Myhead->right = _Myhead;
     _Myhead->color = 1; _Myhead->isnil = 1;

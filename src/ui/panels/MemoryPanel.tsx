@@ -73,7 +73,7 @@ export function MemoryPanel({ view, sel, onSelect, showLib }: Props) {
         for (const x of view.access) if (x.a < a + n && a < x.a + x.l) return x.kind;
         return null;
       },
-      resolves: (p) => view.locate(p) !== null,
+      resolves: (p) => view.locate(p) !== null || view.locate(p - 1) !== null, // a pointer one past the end of an object is fine
       onPointer: (p) => {
         const t = view.locate(p);
         if (t) onSelect({ kind: t.kind, id: t.id });
