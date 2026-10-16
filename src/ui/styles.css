@@ -402,3 +402,19 @@ svg.arrows circle { fill: var(--link); }
 .plat-note { font-size: 13px; }
 @media (max-width: 760px) { .quiz { grid-template-columns: 1fr; } .qlist { max-height: 160px; } }
 .quiz-main h3 { text-transform: none; letter-spacing: 0; color: var(--text); }
+
+.stdin { display: block; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.stdin textarea { display: block; width: 100%; margin-top: 6px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: 13px var(--font-mono); resize: vertical; }
+
+/* phones: two tidy rows instead of a sideways-scrolling bar */
+@media (max-width: 560px) {
+  .app { grid-template-rows: auto minmax(0, 1fr) auto 30px; }
+  .topbar { flex-wrap: wrap; overflow: visible; row-gap: 6px; padding: 6px 10px; }
+  .topbar .brand { order: 1; }
+  .topbar .spacer { order: 2; }
+  .topbar .dirty { display: none; }
+  .topbar .btn.primary, .topbar .btn.ghost { order: 3; }
+  .topbar .seg[aria-label="Target machine"] { order: 4; }
+  .topbar .menu, .topbar > .btn:not(.primary):not(.ghost) { order: 5; }
+  .topbar .mobile-tabs { order: 6; margin-left: auto; }
+}

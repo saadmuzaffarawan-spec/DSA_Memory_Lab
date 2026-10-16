@@ -8,7 +8,7 @@ page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
 page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
 const url = process.env.URL || 'http://localhost:4173/';
 await page.goto(url);
-await page.waitForSelector('.mem, .empty, .banner', { timeout: 20000 });
+await page.waitForSelector('.mem, .empty, .banner', { timeout: 20000, state: 'attached' });
 await page.waitForTimeout(400);
 for (const a of acts) {
   const [cmd, ...rest] = a.split(':');

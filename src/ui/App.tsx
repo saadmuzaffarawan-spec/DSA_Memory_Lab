@@ -61,6 +61,7 @@ export function App() {
   const [showLib, setShowLib] = useState(false);
   const [about, setAbout] = useState(false);
   const [quiz, setQuiz] = useState(false);
+  const [stdin, setStdin] = useState('');
   const [pane, setPane] = useState<'code' | 'inspect'>('code');
   const [toast, setToast] = useState<string | null>(null);
   const [theme, setTheme] = useState<'auto' | 'light' | 'dark'>(() => { try { return (localStorage.getItem('stackyard:theme') as 'light' | 'dark' | null) ?? 'auto'; } catch { return 'auto'; } });
@@ -84,7 +85,7 @@ export function App() {
   const doRun = useCallback(async (src = source, p = platform) => {
     setStatus('running'); setError(null); setPlaying(false);
     try {
-      const r = await runInWorker(src, p);
+      const r = await runInWorker(src, p, stdin);
       setRun(r); setRanSource(src); setK(0); setSel(null);
       setStatus('idle');
       if (r.compileError) { setTab('problems'); }
@@ -92,7 +93,7 @@ export function App() {
     } catch (e) {
       setStatus('error'); setError(e instanceof Error ? e.message : String(e));
     }
-  }, [source, platform, tab]);
+  }, [source, platform, tab, stdin]);
 
   // first run + persist
   const didInit = useRef(false);
@@ -187,7 +188,11 @@ export function App() {
         </button>
         <button className="btn ghost" onClick={copyShare} title="Copy a link to this program"><span className="label">Share</span><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11 1a3 3 0 1 1-2.400 4.800L6 7.200a3 3 0 0 1 0 1.600l2.600 1.400A3 3 0 1 1 8 11.600L5.400 10.200a3 3 0 1 1 0-4.400L8 4.400A3 3 0 0 1 11 1z" /></svg></button>
         <button className="btn ghost iconbtn" onClick={() => setTheme(theme === 'dark' ? 'light' : theme === 'light' ? 'auto' : 'dark')} title={`Theme: ${theme}`} aria-label={`Theme: ${theme}. Click to change`}>
-          {theme === 'dark' ? '☾' : theme === 'light' ? '☀' : '◐'}
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+            {theme === 'dark' ? <path d="M13.500 9.500A5.500 5.500 0 0 1 6.500 2.500a5.500 5.500 0 1 0 7 7z" fill="currentColor" stroke="none" />
+              : theme === 'light' ? <g><circle cx="8" cy="8" r="3" fill="currentColor" stroke="none" /><path d="M8 1.500v1.500M8 13v1.500M1.500 8H3M13 8h1.500M3.400 3.400l1 1M11.600 11.600l1 1M3.400 12.600l1-1M11.600 4.400l1-1" /></g>
+              : <g><circle cx="8" cy="8" r="5.500" /><path d="M8 2.500a5.500 5.500 0 0 1 0 11z" fill="currentColor" stroke="none" /></g>}
+          </svg>
         </button>
         <button className="btn ghost iconbtn" onClick={() => setAbout(true)} title="About, accuracy and shortcuts" aria-label="About">?</button>
       </header>
@@ -228,7 +233,7 @@ export function App() {
             {view && rp && tab === 'memory' && <MemoryPanel view={view} sel={sel} onSelect={(s) => { setSel(s); }} showLib={showLib} />}
             {view && rp && tab === 'hex' && <HexPanel rp={rp} view={view} sel={sel} />}
             {view && tab === 'map' && <MapPanel view={view} plat={plat} />}
-            {tab === 'output' && <OutputPanel text={stdout} stderr={run?.stderr} atEnd={!!view?.atEnd} />}
+            {tab === 'output' && <OutputPanel text={stdout} stderr={run?.stderr} atEnd={!!view?.atEnd} stdin={stdin} onStdin={setStdin} />}
             {tab === 'problems' && <ProblemsPanel diags={diagsForPanel} onJump={() => setPane('code')} />}
           </div>
         </section>

@@ -2,9 +2,13 @@ import type { Diag } from '../../engine/trace';
 import { isUserLine } from '../replay';
 import { hexAddr } from '../decode';
 
-export function OutputPanel({ text, stderr, atEnd }: { text: string; stderr?: string; atEnd: boolean }) {
+export function OutputPanel({ text, stderr, atEnd, stdin, onStdin }: { text: string; stderr?: string; atEnd: boolean; stdin: string; onStdin(v: string): void }) {
   return (
     <>
+      <label className="stdin">
+        <span>Input for <code>cin</code> / <code>scanf</code> (used on the next Run)</span>
+        <textarea value={stdin} onChange={(e) => onStdin(e.target.value)} rows={2} spellCheck={false} placeholder="Type the text your program will read, e.g. 12 34" />
+      </label>
       <pre className="out" aria-label="Program output">{text}</pre>
       {atEnd && stderr ? <pre className="out" style={{ color: 'var(--err)', borderTop: '1px solid var(--border)' }}>{stderr}</pre> : null}
     </>

@@ -65,7 +65,7 @@ export const LINUX: Platform = {
   allocator: 'glibc',
   debug: false,
   vectorGrowth: 'x2',
-  confidence: { dataModel: 'verified', classLayout: 'verified', stdlib: 'verified', heap: 'verified', stack: 'verified' },
+  confidence: { dataModel: 'verified', classLayout: 'verified', stdlib: 'verified', heap: 'verified', stack: 'documented' },
   faultName: 'Segmentation fault (SIGSEGV)',
   macros: { __linux__: '1', __GNUC__: '13', __x86_64__: '1', __cplusplus: '201703L' },
 };

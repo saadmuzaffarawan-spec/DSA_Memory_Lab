@@ -94,7 +94,6 @@ export function Editor({ value, onChange, marks, onRun, readOnly }: Props) {
       indentUnit.of('  '),
       cpp(),
       syntaxHighlighting(highlight),
-      EditorView.lineWrapping,
       EditorState.tabSize.of(2),
       Prec.highest(keymap.of([{ key: 'Mod-Enter', run: () => { cb.current.onRun(); return true; } }])),
       keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
