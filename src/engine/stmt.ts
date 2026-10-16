@@ -252,9 +252,13 @@ function execCtor(I: Interp, fn: Fn, frame: Frame, mostDerived: boolean) {
           initFromExpr(I, ft, at, ini.args[0]);
         } else if (ft.k === 'arr') {
           construct(I, ft, at, [], 'value');
-        } else if (ini.args.length === 0) valueInit(I, ft, at);
-        else if (ini.args.length === 1) initFieldFromValue(I, f, addr, evalExpr(I, ini.args[0]));
-        else I.cerr(`too many initialisers for member '${f.name}'`);
+        } else {
+          const vals = ini.args.some((x) => x.k === 'expand') ? evalArgs(I, ini.args) : null; // `member(args...)` with a pack
+          const n = vals ? vals.length : ini.args.length;
+          if (n === 0) valueInit(I, ft, at);
+          else if (n === 1) initFieldFromValue(I, f, addr, vals ? vals[0] : evalExpr(I, ini.args[0]));
+          else I.cerr(`too many initialisers for member '${f.name}'`);
+        }
       } finally { releaseTemps(I, mark); }
     } else {
       const mark = tempMark(I);

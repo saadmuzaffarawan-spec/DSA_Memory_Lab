@@ -142,7 +142,26 @@ export function valueType(v: V): Type | null {
 }
 
 /** conversion rank: 0 exact, 1 qualification/binding adjustment, 2 promotion, 3 conversion, 4 user-defined, 5 ellipsis, null = impossible */
+/** a braced list can only initialise std::initializer_list<E> when every element converts to E */
+function initListElemsOk(I: Interp, arg: Extract<V, { k: 'init' }>, P: Type): boolean {
+  const b = P.k === 'ref' ? P.to : P;
+  if (b.k !== 'cls' || arg.node.k !== 'init') return true;
+  I.completeClass(b.c);
+  if (!b.c.x.isInitList) return true;
+  const targs = b.c.x.tmplArgs as TArgVal[];
+  const elem = targs[0]?.k === 'type' ? targs[0].t : null;
+  if (!elem) return true;
+  for (const it of arg.node.items) {
+    if (it.k === 'init') continue;
+    let v: V;
+    try { v = unevaluated(I, () => evalExpr(I, it)); } catch { return true; }
+    if (rankConv(I, v, elem) === null) return false;
+  }
+  return true;
+}
+
 export function rankConv(I: Interp, arg: V, P: Type): number | null {
+  if (arg.k === 'init' && !initListElemsOk(I, arg, P)) return null;
   if (P.k === 'ref') {
     const target = P.to;
     if (arg.k === 'init') return target.k === 'cls' || target.k === 'arr' ? (P.rv ? 4 : 4.1) : null; // a braced list is a temporary: T&& beats const T&

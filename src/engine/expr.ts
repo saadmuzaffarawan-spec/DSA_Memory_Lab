@@ -702,6 +702,7 @@ export function memberOfObject(I: Interp, obj: Extract<V, { k: 'l' }>, e: Extrac
   }
   checkAccess(I, hit, cls, last.id, e.pos);
   if (hit.field) {
+    if (hit.field.offset === undefined && !hit.field.isStatic) I.layoutOf(hit.owner); // offsets are assigned lazily, on first layout
     // virtual-base members are located through the dynamic type
     let a = baseAddr + hit.baseOffset;
     if (hit.viaVirtual && !I.uneval) {

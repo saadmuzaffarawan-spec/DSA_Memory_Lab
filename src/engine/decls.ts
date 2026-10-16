@@ -674,6 +674,7 @@ export function instantiateClassTemplate(I: Interp, ct: ClassTemplate, args: TAr
   const c = newClassInfo(I, decl, ct.scope, ct.name, full, bindings);
   c.x.tmplArgs = full;
   c.x.tmplOrigin = ct;
+  c.x.isInitList = ct.name === 'initializer_list' && ct.scope.name === 'std';
   c.x.tmplKey = key;
   ct.instances.set(key, c);
   if (!decl.defined) { c.defined = false; return clsType(c); }
@@ -1024,6 +1025,13 @@ function makeImplicitMembers(I: Interp, c: ClassInfo, hasDeclaredCtor: boolean, 
   const cref = refTo(constOf(self));
   const rref = refTo(self, true);
   const ctors = x.ctors as Fn[];
+  // `T(const T&) = default;` and friends behave exactly like the implicit members: drop the declaration and let them be synthesised
+  for (const list of [ctors, x.assigns as Fn[]]) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const g = list[i];
+      if (g.decl?.defaulted && !g.decl.body && (paramIsSelf(I, g, c, 'copy') || paramIsSelf(I, g, c, 'move'))) list.splice(i, 1);
+    }
+  }
   const userCopy = ctors.find((f) => f.decl && paramIsSelf(I, f, c, 'copy'));
   const userMove = ctors.find((f) => f.decl && paramIsSelf(I, f, c, 'move'));
   const asg = x.assigns as Fn[];

@@ -143,13 +143,15 @@ template <class T, class C> constexpr const T& max(const T& a, const T& b, C com
 template <class T> T min(initializer_list<T> il) { const T* p = il.begin(); T m = *p; for (++p; p != il.end(); ++p) if (*p < m) m = *p; return m; }
 template <class T> T max(initializer_list<T> il) { const T* p = il.begin(); T m = *p; for (++p; p != il.end(); ++p) if (m < *p) m = *p; return m; }
 
+struct piecewise_construct_t { explicit piecewise_construct_t() {} };
 template <class A, class B> struct pair {
   typedef A first_type; typedef B second_type;
   A first; B second;
   constexpr pair() : first(), second() {}
   constexpr pair(const A& a, const B& b) : first(a), second(b) {}
-  template <class U, class V> constexpr pair(U&& a, V&& b) : first(forward<U>(a)), second(forward<V>(b)) {}
+  template <class U, class V, class = typename enable_if<!is_same<typename remove_cv<typename remove_reference<U>::type>::type, piecewise_construct_t>::value>::type> constexpr pair(U&& a, V&& b) : first(forward<U>(a)), second(forward<V>(b)) {}
   template <class U, class V> constexpr pair(const pair<U, V>& p) : first(p.first), second(p.second) {}
+  template <class K2, class... Args> pair(piecewise_construct_t, K2&& k, Args&&... a) : first(forward<K2>(k)), second(forward<Args>(a)...) {}
   pair(const pair&) = default;
   pair(pair&&) = default;
   pair& operator=(const pair& p) { first = p.first; second = p.second; return *this; }
