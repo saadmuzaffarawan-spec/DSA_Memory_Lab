@@ -29,6 +29,7 @@ export function alignOf(t: Type): number {
 
 export function layoutOf(c: ClassInfo): Layout {
   if (c.layout) return c.layout;
+  if (!c.x.completed && c.x.ensure) { c.x.ensure(); if (c.layout) return c.layout; }
   const l = c.plat.abi === 'msvc' ? layoutMsvc(c) : layoutItanium(c);
   c.layout = l;
   return l;

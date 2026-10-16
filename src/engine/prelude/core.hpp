@@ -92,3 +92,4 @@ template <class T> class initializer_list {
 template <class T> const T* begin(initializer_list<T> il) { return il.begin(); }
 template <class T> const T* end(initializer_list<T> il) { return il.end(); }
 }
+#define offsetof(T, m) ((size_t)&(((T*)0)->m))

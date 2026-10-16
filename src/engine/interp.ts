@@ -180,6 +180,16 @@ export class Interp {
   // ---- loading and storing scalars --------------------------------------------------------------------------------------
   /** load a scalar of type t at address a (class and array types stay as lvalues) */
   load(t: Type, a: number, what?: string): V {
+    if (this.uneval) {
+      switch (t.k) {
+        case 'int': case 'bool': case 'enum': return { k: 'i', t, v: 0n };
+        case 'float': return { k: 'f', t, v: 0 };
+        case 'ptr': case 'nullptr': return { k: 'i', t, v: 0n };
+        case 'ref': return { k: 'l', t: t.to, a: 0, xv: t.rv };
+        case 'cls': case 'arr': case 'fn': return { k: 'l', t, a };
+        case 'void': return { k: 'void' };
+      }
+    }
     switch (t.k) {
       case 'int': case 'bool': case 'enum': {
         const { bytes, signed } = intInfo(t);
@@ -202,6 +212,11 @@ export class Interp {
 
   /** store an rvalue scalar of type t */
   store(t: Type, a: number, v: V, what?: string) {
+    if (t.k === 'ref') {
+      if (v.k === 'l') this.mem.storeInt(a, 8, BigInt(v.a), 'reference');
+      else this.cerr('cannot bind a reference to this value');
+      return;
+    }
     const x = this.rv(v);
     switch (t.k) {
       case 'int': case 'bool': case 'enum': {
@@ -252,7 +267,9 @@ export class Interp {
 
   storeBits(v: V & { k: 'l' }, val: bigint) {
     const bf = v.bf!;
-    const raw = this.mem.loadInt(v.a, bf.unit, false, 'bit-field');
+    const rawb = this.mem.readRaw(v.a, bf.unit);
+    let raw = 0n;
+    for (let i = bf.unit - 1; i >= 0; i--) raw = (raw << 8n) | BigInt(rawb[i]);
     const mask = ((1n << BigInt(bf.width)) - 1n) << BigInt(bf.bit);
     const nv = (raw & ~mask) | ((BigInt.asUintN(bf.width, val) << BigInt(bf.bit)) & mask);
     this.mem.storeInt(v.a, bf.unit, nv, 'bit-field');
@@ -368,6 +385,7 @@ export class Interp {
     }
     f.cursor = c;
     if (c < f.minCursor) f.minCursor = c;
+    if (!this.uneval && size > 0) this.mem.setState(c, size, S.Uninit);
     return c;
   }
 

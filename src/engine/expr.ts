@@ -155,6 +155,7 @@ export function evalExpr(I: Interp, e: A.Expr): V {
 }
 
 function sizeOfChecked(I: Interp, t: Type): number {
+  if (t.k === 'cls') I.completeClass(t.c);
   if (t.k === 'cls' && !t.c.defined) I.cerr(`invalid application of 'sizeof' to incomplete type '${t.c.name}'`);
   if (t.k === 'arr' && t.n === null) I.cerr("invalid application of 'sizeof' to an array of unknown bound");
   if (t.k === 'ref') return sizeOf(t.to);

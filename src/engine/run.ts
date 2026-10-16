@@ -142,6 +142,7 @@ function runExitHandlers(I: Interp) {
 }
 
 function handleStop(I: Interp, e: any, exitCode: number | null, reason: RunResult['reason'], endMessage: string | undefined) {
+  if ((globalThis as any).__STACKYARD_DEV && process.env.TRACE) console.error(e?.stack);
   const plat = I.plat;
   if (e instanceof Fault) {
     if (e.kind === 'exit') return { exitCode: e.code, reason: 'exit' as const, endMessage };

@@ -647,6 +647,7 @@ export function pickOverload(
 function templSpecificity(t: FuncTemplate): number {
   // fewer fully generic parameters => more specialised
   let generic = 0;
+  if (t.decl.params.some((p) => p.pack || p.type.k === 'pack')) generic += 50;
   const names = new Set((t.decl.tparams ?? []).map((p) => p.name));
   for (const p of t.decl.params) {
     let te = p.type;

@@ -1,0 +1,9 @@
+Animal()
+Dog()
+Woof
+4 16 16
+~Dog
+~Animal
+C1 copy1->2 copy2->3 copy3->4 ~C3 4
+~C4 ~C2 ~C1 
+(14,16) 0

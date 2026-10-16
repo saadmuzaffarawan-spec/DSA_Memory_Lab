@@ -547,6 +547,7 @@ function newClassInfo(I: Interp, d: A.ClassDecl, declScope: Scope, name: string,
   cs.cls = c;
   c.x = { decl: d, declScope: parent, scope: cs, fieldMap: new Map(), methods: [], ctors: [], ctorTemplates: [], convs: [], assigns: [], dtor: null, completed: false, completing: false, friends: new Set(), friendFns: new Set(), outer: declScope.kind === 'class' ? declScope.cls : null };
   if (bindings) c.x.bindings = bindings;
+  c.x.ensure = () => completeClass(I, c);
   I.classes.push(c);
   return c;
 }

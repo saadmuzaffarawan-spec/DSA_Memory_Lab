@@ -9,14 +9,16 @@ import type {
 export interface ParseCtx {
   typeNames: Set<string>;
   templNames: Set<string>;
+  /** names of function templates (they take <...> but are not types) */
+  funcTempls: Set<string>;
   /** names that are definitely values (not types) when they clash, e.g. function names */
 }
 
 export function newParseCtx(): ParseCtx {
-  return { typeNames: new Set(), templNames: new Set() };
+  return { typeNames: new Set(), templNames: new Set(), funcTempls: new Set() };
 }
 export function cloneCtx(c: ParseCtx): ParseCtx {
-  return { typeNames: new Set(c.typeNames), templNames: new Set(c.templNames) };
+  return { typeNames: new Set(c.typeNames), templNames: new Set(c.templNames), funcTempls: new Set(c.funcTempls) };
 }
 
 const BUILTIN_WORDS = new Set(['void', 'bool', 'char', 'short', 'int', 'long', 'float', 'double', 'signed', 'unsigned', 'wchar_t', 'char16_t', 'char32_t', '__int64', '__int128']);
@@ -38,6 +40,7 @@ export class Parser {
   p = 0;
   noGt = 0; // inside template argument lists '>' closes
   className: string[] = [];
+  sawPackDecl = false;
   templDepth = 0;
 
   constructor(public toks: Token[], public ctx: ParseCtx) {}
@@ -422,7 +425,7 @@ export class Parser {
       ctorInit: null, tparams: cx.tparams, access: cx.access, isCtor: false, isDtor: false, isConv: false, pos,
     };
     if ((d as any).trailing) f.trailingRet = true;
-    if (cx.tparams && !name.startsWith('operator') && !name.startsWith('~')) this.ctx.templNames.add(name);
+    if (cx.tparams && !name.startsWith('operator') && !name.startsWith('~')) { this.ctx.templNames.add(name); this.ctx.funcTempls.add(name); }
     // virt-specifiers
     for (;;) {
       if (this.isId('override')) { this.p++; f.override = true; continue; }
@@ -1012,7 +1015,7 @@ export class Parser {
       }
       break;
     }
-    void packDecl;
+    if (packDecl) this.sawPackDecl = true;
     return {
       name, qname, refQual, trailing,
       apply: (t: TypeExpr) => {
@@ -1054,8 +1057,10 @@ export class Parser {
       this.skipAttributes();
       const ds = this.parseDeclSpecs(false);
       if (!ds.spec) this.err(`expected parameter type before '${this.t.s}'`);
+      this.sawPackDecl = false;
       const d = this.parseDeclarator({ k: 'base', spec: ds.spec }, true, true);
-      let pack = false;
+      let pack = this.sawPackDecl;
+      this.sawPackDecl = false;
       if (this.accept('...')) pack = true;
       const param: Param = { type: pack ? { k: 'pack', of: d.type } : d.type, name: d.name || undefined, pos, pack };
       if (this.accept('=')) param.def = this.parseAssign();
@@ -1205,7 +1210,7 @@ export class Parser {
     if (CV.has(t.s) || STORAGE.has(t.s) || t.s === 'constexpr' || t.s === 'auto' || t.s === 'decltype' || t.s === 'alignas' || t.s === 'typename' || t.s === 'inline') return true;
     if (BUILTIN_WORDS.has(t.s)) {
       // int(x) functional cast expression:  int(3.5);
-      return !(this.isOpAt(1, '(') );
+      return !(this.isOpAt(1, '(')) || this.isOpAt(2, '*') || this.isOpAt(2, '&');
     }
     if (KEYWORDS.has(t.s)) return false;
     if (!this.isTypeNameStart(false)) return false;
@@ -1217,7 +1222,7 @@ export class Parser {
       if (nx.k === 'id' && !KEYWORDS.has(nx.s)) return true;
       if (nx.k === 'op' && (nx.s === '*' || nx.s === '&' || nx.s === '&&')) return true;
       if (nx.k === 'op' && nx.s === '[' && this.isOpAt(1, ']')) return false;
-      if (nx.k === 'op' && nx.s === '(' ) return false;
+      if (nx.k === 'op' && nx.s === '(') return this.isOpAt(1, '*') || this.isOpAt(1, '&');
       if (nx.k === 'op' && nx.s === '::') return false;
       if (nx.k === 'id' && nx.s === 'const') return true;
       return false;
@@ -1497,7 +1502,7 @@ export class Parser {
             const nx = this.t;
             if (nx.k === 'eof') throw new CompileError('x');
             if (nx.k === 'op' && !['(', '-', '+', '*', '&', '!', '~', '++', '--', '{', '::', '&&'].includes(nx.s)) throw new CompileError('x');
-            if (nx.k === 'op' && (nx.s === '-' || nx.s === '+' || nx.s === '*' || nx.s === '&') && !(ty.k === 'ptr' || ty.k === 'ref' || (ty.k === 'base' && (ty.spec.base.k === 'builtin' || ty.spec.base.k === 'auto')))) throw new CompileError('x');
+            if (nx.k === 'op' && (nx.s === '-' || nx.s === '+' || nx.s === '*' || nx.s === '&') && !(ty.k === 'ptr' || ty.k === 'ref' || (ty.k === 'base' && (ty.spec.base.k === 'builtin' || ty.spec.base.k === 'auto' || ty.spec.base.k === 'name')))) throw new CompileError('x');
             return ty;
           });
           if (cast) {
@@ -1717,7 +1722,7 @@ export class Parser {
 
   private finishIdExpr(q: QName, pos: Pos): Expr {
     const last = q.parts[q.parts.length - 1].id;
-    const isTypeName = this.ctx.typeNames.has(last) || this.ctx.templNames.has(last);
+    const isTypeName = this.ctx.typeNames.has(last) || (this.ctx.templNames.has(last) && !this.ctx.funcTempls.has(last));
     // T(args) / T{args}  -> functional cast / construction
     if (isTypeName && (this.isOp('{') || (this.isOp('(') && !this.looksLikeCallToFunction(q)))) {
       const ty: TypeExpr = { k: 'base', spec: { k: 'spec', base: { k: 'name', q }, pos } };

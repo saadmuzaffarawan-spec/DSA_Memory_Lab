@@ -504,6 +504,7 @@ export function declareLocal(I: Interp, vd: A.VarDecl, dd: A.Declarator) {
   const isRef = t.k === 'ref';
   const size = isRef ? 8 : sizeOf(t);
   if (t.k === 'void') I.cerr(`variable or field '${dd.name}' declared void`, dd.pos);
+  if (t.k === 'cls') I.completeClass(t.c);
   if (t.k === 'cls' && !t.c.defined) I.cerr(`variable '${dd.name}' has incomplete type '${t.c.name}'`, dd.pos);
   let addr: number | undefined = frame.slotMap.get(dd);
   let late = false;
