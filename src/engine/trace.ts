@@ -42,7 +42,7 @@ export type Ev =
   | { t: 'alloc'; id: number; a: number; size: number; usable: number; chunk: number; how: string; line: number; type?: string }
   | { t: 'free'; id: number; how: string; line: number }
   | { t: 'brk'; from: number; to: number }
-  | { t: 'out'; s: string }
+  | { t: 'out'; s: string; err?: boolean }
   | { t: 'diag'; d: Diag }
   | { t: 'note'; msg: string }
   | { t: 'end'; code: number; reason: 'return' | 'exit' | 'fault' | 'limit' | 'abort'; msg?: string };
@@ -73,4 +73,15 @@ export interface RunResult {
   exitCode: number | null;
   stdout: string;
   diagnostics: Diag[];
+  /** set when the program does not compile: no events are produced, like a real compiler */
+  compileError?: { message: string; line: number; col: number };
+  /** the function the run stopped in, plus why */
+  reason?: 'return' | 'exit' | 'fault' | 'limit' | 'abort';
+  /** human-readable final message (fault text, terminate message ...) */
+  endMessage?: string;
+  stderr?: string;
+  /** allocator model name for the UI */
+  allocator?: string;
+  /** globals / statics laid out in the image (for the memory map) */
+  steps?: number;
 }

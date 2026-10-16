@@ -185,7 +185,11 @@ export function rankConv(I: Interp, arg: V, P: Type): number | null {
     return P.k === 'ptr' ? null : (arg.node.k === 'init' && arg.node.items.length <= 1 ? 3 : null);
   }
   if (arg.k === 'fn') {
-    if (P.k === 'ptr' && P.to.k === 'fn') return arg.cands.length || arg.tmpls?.length ? 1 : null;
+    if (P.k === 'ptr' && P.to.k === 'fn') {
+      const ft = P.to;
+      if (arg.tmpls?.length) return 1;
+      return arg.cands.some((f) => { const sg = getSig(I, f); return sg.params.length === ft.params.length && sg.params.every((p, i) => sameType(p, ft.params[i], true)); }) ? 1 : null;
+    }
     if (P.k === 'bool') return 3;
     return null;
   }

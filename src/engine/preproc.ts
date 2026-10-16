@@ -44,6 +44,7 @@ export function preprocess(source: string, predefined: Record<string, string> = 
   const conds: Cond[] = [];
   const active = () => conds.every((c) => c.active);
 
+  let lineDelta = 0;
   let i = 0;
   const lineTokens = (): Token[] => {
     // tokens on the same logical line as raw[i] (after '#')
@@ -310,14 +311,18 @@ export function preprocess(source: string, predefined: Record<string, string> = 
           break;
         }
         case 'error': if (act) throw new CompileError('#error ' + rest.map((x) => x.raw ?? x.s).join(' '), ln); break;
-        case 'warning': case 'line': break;
+        case 'warning': break;
+        case 'line': {
+          if (act && rest[0] && rest[0].k === 'num') lineDelta = Number(rest[0].big ?? 0n) - (ln + 1);
+          break;
+        }
         default:
           if (act) throw new CompileError(`invalid preprocessing directive #${dir}`, ln);
       }
       continue;
     }
     if (!active()) { i++; continue; }
-    pendingLine.push(t);
+    pendingLine.push(lineDelta ? { ...t, origLine: (t.origLine ?? t.line) + lineDelta } : t);
     i++;
     // expand once per ~line to bound the lookahead needed for function-like macros
     if (raw[i].bol && pendingLine.length > 0) {

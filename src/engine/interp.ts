@@ -333,6 +333,30 @@ export class Interp {
     w(obj + o1, this.plat.stdlib === 'msvc-stl' ? arr + n * es : n);
   }
 
+  // ---- output ---------------------------------------------------------------------------------------------------------------------------
+  print(s: string, err = false) {
+    if (!s) return;
+    if (err) this.errOut += s; else this.out += s;
+    this.emit({ t: 'out', s, err });
+  }
+  errOut = '';
+  lastLine = '';
+  /** a scratch area in the C library page, used by natives that hand a string back to prelude code */
+  scratchBuffer(n: number): number {
+    const base = this.plat.libc.base + 0x1000;
+    if (n > 0x1000) this.cerr('internal: scratch buffer too small');
+    return base;
+  }
+
+  /** read a NUL-terminated string with the usual diagnostics (uninitialised / freed / out of bounds) */
+  cstr(a: number, what = 'string'): string {
+    let n = 0;
+    const lim = 1 << 20;
+    while (n < lim && this.mem.readRaw(a + n, 1)[0] !== 0) n++;
+    const bytes = this.mem.read(a, n + 1, what);
+    return new TextDecoder().decode(bytes.subarray(0, n));
+  }
+
   // ---- stack ------------------------------------------------------------------------------------------------------------------------------
   stackAlloc(size: number, align: number): number {
     const f = this.frame;

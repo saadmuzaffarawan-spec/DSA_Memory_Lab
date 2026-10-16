@@ -858,7 +858,18 @@ export class Parser {
         return 'operator ' + t.s;
       }
       // conversion operator: operator T
-      const ty = this.parseTypeId();
+      const cds = this.parseDeclSpecs(false);
+      if (!cds.spec) this.err("expected a type after 'operator'");
+      let ty: TypeExpr = { k: 'base', spec: cds.spec };
+      for (;;) {
+        if (this.accept('*')) {
+          const pt: TypeExpr = { k: 'ptr', to: ty };
+          while (this.isId('const') || this.isId('volatile')) { if (this.t.s === 'const') pt.const = true; else pt.volatile = true; this.p++; }
+          ty = pt;
+        } else if (this.accept('&')) ty = { k: 'ref', to: ty, rv: false };
+        else if (this.accept('&&')) ty = { k: 'ref', to: ty, rv: true };
+        else break;
+      }
       this.pendingConvType = ty;
       return 'operator ' + this.typeText(ty);
     }
