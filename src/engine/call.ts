@@ -249,7 +249,7 @@ export function rankConv(I: Interp, arg: V, P: Type): number | null {
     return null;
   }
   if (P0.k === 'bool') {
-    if (A0.k === 'ptr' || A0.k === 'nullptr') return 3;
+    if (A0.k === 'ptr' || A0.k === 'nullptr') return 3.5; // [over.ics.rank]: a conversion to bool is worse than any other standard conversion
     if (A0.k === 'int' || A0.k === 'float' || A0.k === 'enum') return 3;
     return null;
   }
