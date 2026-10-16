@@ -142,7 +142,7 @@ button { cursor: pointer; }
 .banner.info { background: var(--surface-2); }
 
 /* ---------- memory panel ---------- */
-.mem { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; min-height: 100%; position: relative; }
+.mem { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 0; min-height: 100%; position: relative; }
 .mem.single { grid-template-columns: minmax(0, 1fr); }
 .mem-col { padding: 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .mem-col + .mem-col { border-left: 1px dashed var(--border-strong); }
@@ -418,3 +418,11 @@ svg.arrows circle { fill: var(--link); }
   .topbar .menu, .topbar > .btn:not(.primary):not(.ghost) { order: 5; }
   .topbar .mobile-tabs { order: 6; margin-left: auto; }
 }
+
+/* nested structures: label on its own line, body indented */
+.nested { min-width: 0; }
+.nested > .flabel { display: block; margin-bottom: 2px; }
+.nested-body { margin-left: 4px; min-width: 0; }
+.fields .flabel small { display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.fields { min-width: 0; }
+.fields > div { min-width: 0; }

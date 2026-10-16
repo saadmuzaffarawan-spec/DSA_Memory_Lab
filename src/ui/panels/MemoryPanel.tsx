@@ -172,7 +172,7 @@ export function MemoryPanel({ view, sel, onSelect, showLib }: Props) {
 
       <div className="mem-col">
         <div className="col-title">Stack <span>grows downward · automatic</span></div>
-        {view.frames.length === 0 && <div className="card"><div className="empty"><h3>No function is running</h3>Press <b>Run</b>, then step into <span className="mono">main</span>.</div></div>}
+        {view.frames.length === 0 && <div className="card"><div className="empty">{view.atEnd ? <><h3>The program has finished</h3>Every stack frame is gone. Step back to watch it again.</> : <><h3>No function is running</h3>Press <b>Run</b>, then step into <span className="mono">main</span>.</>}</div></div>}
         {view.frames.map((f, i) => (
           <div className={'card' + (i === 0 ? ' current' : '')} key={f.id} data-anchor={`frame:${f.id}`}>
             <div className="card-head">

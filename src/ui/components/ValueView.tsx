@@ -19,6 +19,21 @@ const STATE_WORD: Record<number, string> = {
   [S.Freed]: 'freed: no longer yours', [S.Meta]: 'allocator bookkeeping', [S.Dead]: 'stack memory of a finished call',
 };
 
+/** shorten long template names: std::__rb_tree<int, std::pair<const int, std::string>, ...> -> __rb_tree<…> */
+export function shortType(name: string, max = 30): string {
+  let t = name.replace(/\bstd::/g, '');
+  if (t.length <= max) return t;
+  for (let guard = 0; guard < 8 && t.length > max; guard++) {
+    // collapse the innermost <...> groups, then the outermost
+    const next = t.replace(/<[^<>]*>/g, '‹›');
+    if (next === t) break;
+    t = next;
+    if (!t.includes('‹›')) break;
+  }
+  t = t.replace(/‹›/g, '<…>');
+  return t.length > max + 6 ? t.slice(0, max) + '…' : t;
+}
+
 function title(v: Value): string {
   return `${v.label} · ${v.type || 'padding'}${v.via ? ` (from base ${v.via})` : ''}\n${hexAddr(v.addr)} · ${v.size} byte${v.size === 1 ? '' : 's'}\n${STATE_WORD[v.state] ?? ''}`;
 }
@@ -111,9 +126,13 @@ export function ValueView({ v, ctx }: { v: Value; ctx: ValueCtx }) {
 }
 
 function Row({ label, v, ctx }: { label: string; v: Value; ctx: ValueCtx }) {
+  const nested = !isLeafKind(v) && v.kind !== 'pad' && !(v.kind === 'array' && (v.children ?? []).every(isLeafKind));
+  const lab = <span className="flabel" title={v.type}>{label}{v.type && !label.startsWith('[') ? <small>{shortType(v.type)}</small> : null}</span>;
+  // structures inside structures get a line of their own and an indent, so deep nesting never squeezes the column
+  if (nested) return <div className="nested" style={{ gridColumn: '1 / -1' }}>{lab}<div className="nested-body"><ValueView v={v} ctx={ctx} /></div></div>;
   return (
     <>
-      <span className="flabel">{label}{v.type && !label.startsWith('[') ? <small>{v.type}</small> : null}</span>
+      {lab}
       <div><ValueView v={v} ctx={ctx} /></div>
     </>
   );
