@@ -68,7 +68,7 @@ function charText(c: number): string {
 }
 
 function dominantState(states: Uint8Array): number {
-  let worst = S.Init;
+  let worst: number = S.Init;
   for (const s of states) {
     if (s === S.Uninit) return S.Uninit;
     if (s === S.Freed || s === S.Dead || s === S.Unalloc) worst = s;
