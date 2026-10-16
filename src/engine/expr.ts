@@ -276,7 +276,8 @@ export function evalId(I: Interp, e: Id): V {
       if (ent.vals) return ent.vals[idx];
       const item = ent.items[idx];
       if (item.k === 'val') return { k: 'i', t: item.t, v: item.v };
-      I.cerr(`'${last.id}' is a type pack and cannot be used as a value`, e.pos);
+      if (item.k === 'type') return { k: 'type', t: item.t };
+      I.cerr(`'${last.id}' is a template pack and cannot be used as a value`, e.pos);
     }
     case 'bind': return bindingLv(I, ent);
     case 'cap': I.cerr('internal: capture entity');
@@ -793,6 +794,25 @@ export function evalArgs(I: Interp, args: A.Expr[]): V[] {
 }
 
 export function packNames(I: Interp, e: A.Expr, out: Set<string> = new Set()): Set<string> {
+  const typeNames = (te: A.TypeExpr) => {
+    switch (te.k) {
+      case 'base': {
+        const b = te.spec.base;
+        if (b.k === 'name') {
+          if (b.q.parts.length === 1) {
+            const r = lookupUnqualified(I, b.q.parts[0].id, I.scope);
+            if (r && r.ents[0] && r.ents[0].k === 'pack') out.add(b.q.parts[0].id);
+          }
+          for (const part of b.q.parts) for (const ta of part.targs ?? []) { if (ta.k === 'type' || ta.k === 'pack') typeNames(ta.t); }
+        }
+        break;
+      }
+      case 'ptr': case 'ref': typeNames(te.to); break;
+      case 'arr': typeNames(te.of); break;
+      case 'pack': typeNames(te.of); break;
+      default: break;
+    }
+  };
   const visit = (x: A.Expr | undefined | null) => {
     if (!x) return;
     switch (x.k) {
@@ -800,6 +820,11 @@ export function packNames(I: Interp, e: A.Expr, out: Set<string> = new Set()): S
         if (x.q.parts.length === 1) {
           const r = lookupUnqualified(I, x.q.parts[0].id, I.scope);
           if (r && r.ents[0] && r.ents[0].k === 'pack') out.add(x.q.parts[0].id);
+        }
+        // packs used inside explicit template arguments:  std::forward<A>(args)...
+        for (const part of x.q.parts) for (const ta of part.targs ?? []) {
+          if (ta.k === 'type' || ta.k === 'pack') typeNames(ta.t);
+          else visit(ta.e);
         }
         break;
       }
@@ -1176,10 +1201,10 @@ function initNewObject(I: Interp, t: Type, addr: number, e: Extract<A.Expr, { k:
     else if (e.args === null) construct(I, t, addr, [], 'default');
     else construct(I, t, addr, evalArgs(I, e.args), 'direct');
   } else if (e.args !== null) {
-    if (e.args.length === 0) valueInit(I, t, addr);
+    const vals = evalArgs(I, e.args);
+    if (vals.length === 0) valueInit(I, t, addr);
     else {
-      const v = evalExpr(I, e.args[0]);
-      const cv = convertTo(I, v, t, e);
+      const cv = convertTo(I, vals[0], t, e);
       I.store(t, addr, cv);
     }
   }

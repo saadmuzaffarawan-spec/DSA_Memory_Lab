@@ -1,0 +1,10 @@
+1/1 2/2 3/4 4/4 5/8 6/8 7/8 8/8 9/16 10/16 
+13 16 1,99,4,9,16,25,36,49,64,81,7,7,7,
+44194
+351
+vector::_M_range_check: __n (which is 100) >= this->size() (which is 4)
+c1 c2 | c3 mv1 d1 mv2 d2 | =mv =mv d3 | d2 d3 
+Mmv1 Md1 | Mmv2 Mcp1 Md1 Md2 | Mmv3 Mcp1 Mcp2 Md1 Md2 Md3 
+32
+99941 24
+Md1 Md2 Md3 

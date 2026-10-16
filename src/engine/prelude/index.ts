@@ -10,6 +10,7 @@ import utility from './utility.hpp?raw';
 import algorithm from './algorithm.hpp?raw';
 import exception from './exception.hpp?raw';
 import string from './string.hpp?raw';
+import vector from './vector.hpp?raw';
 import iostream from './iostream.hpp?raw';
 
 interface Chunk { src: string; deps: string[] }
@@ -26,12 +27,14 @@ const CHUNKS: Record<string, Chunk> = {
   algorithm: { src: algorithm, deps: ['core', 'utility'] },
   exception: { src: exception, deps: ['core', 'cstring'] },
   string: { src: string, deps: ['core', 'cstdio', 'cstring', 'utility', 'exception', 'algorithm'] },
+  vector: { src: vector, deps: ['core', 'cstdio', 'cstring', 'utility', 'exception', 'algorithm', 'string'] },
   iostream: { src: iostream, deps: ['string', 'core', 'utility', 'exception', 'cstdio', 'cstdlib', 'cstring', 'cmath', 'cctype'] },
 };
 
 /** header name -> chunk */
 const HEADERS: Record<string, string> = {
   algorithm: 'algorithm', numeric: 'algorithm', iterator: 'algorithm', utility: 'utility', type_traits: 'utility', functional: 'utility',
+  exception: 'exception', stdexcept: 'exception', new: 'exception', string: 'string', vector: 'vector',
   iostream: 'iostream', istream: 'iostream', ostream: 'iostream', iomanip: 'iostream',
   cstdio: 'cstdio', 'stdio.h': 'cstdio', cstdlib: 'cstdlib', 'stdlib.h': 'cstdlib', cstring: 'cstring', 'string.h': 'cstring',
   cmath: 'cmath', 'math.h': 'cmath', cctype: 'cctype', 'ctype.h': 'cctype', cassert: 'cassert', 'assert.h': 'cassert',

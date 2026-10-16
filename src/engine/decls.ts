@@ -14,7 +14,7 @@ import {
 import { bindingScope, bindingsKey, deduceArgs, fillDefaults, mentionsParams, type Bindings } from './templ';
 import { evalArgs, evalConstInt, evalExpr, typeOfExpr, unevaluated } from './expr';
 import {
-  construct, finalOverrider, getSig, initFromBraces, initFromExpr, prepareStorage, sameSignature, valueInit, markBuilt, hasNontrivialDtor, rootDecl,
+  bindRef, convertTo, construct, finalOverrider, getSig, initFromBraces, initFromExpr, prepareStorage, sameSignature, valueInit, markBuilt, hasNontrivialDtor, rootDecl,
 } from './call';
 
 // =====================================================================================================================
@@ -321,6 +321,13 @@ export function initDeclared(I: Interp, t: Type, addr: number, dd: A.Declarator)
   }
   if (dd.ctorArgs) {
     if (t.k === 'cls') construct(I, t, addr, evalArgs(I, dd.ctorArgs), 'direct');
+    else if (dd.ctorArgs.some((a) => a.k === 'expand')) {
+      // T x(args...) with a pack: expand first, then initialise from the single resulting value
+      const vals = evalArgs(I, dd.ctorArgs);
+      if (vals.length === 0) valueInit(I, t, addr);
+      else if (t.k === 'ref') I.store(t, addr, bindRef(I, vals[0], t) as Extract<V, { k: 'l' }>);
+      else I.store(t, addr, convertTo(I, vals[0], t));
+    }
     else if (t.k === 'ref') initFromExpr(I, t, addr, dd.ctorArgs[0]);
     else if (dd.ctorArgs.length === 0) valueInit(I, t, addr);
     else initFromExpr(I, t, addr, dd.ctorArgs[0]);
