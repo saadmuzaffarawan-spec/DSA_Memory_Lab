@@ -743,9 +743,9 @@ function buildClass(I: Interp, c: ClassInfo) {
       }
       const t = resolveSpec(I, { k: 'spec', base: { k: 'name', q: b.q }, pos: b.q.pos }, cs);
       if (t.k !== 'cls') I.cerr(`base class '${b.q.parts.map((p) => p.id).join('::')}' is not a class`, d.pos);
-      if (!t.c.x.decl?.defined) I.cerr(`invalid use of incomplete type '${t.c.name}' as a base class`, d.pos);
+      if (!t.c.x.decl?.defined && !t.c.defined) I.cerr(`invalid use of incomplete type '${t.c.name}' as a base class`, d.pos);
       completeClass(I, t.c);
-      if (t.c.x.decl.final) I.cerr(`cannot derive from 'final' class '${t.c.name}'`, d.pos);
+      if (t.c.x.decl?.final) I.cerr(`cannot derive from 'final' class '${t.c.name}'`, d.pos);
       c.bases.push({ cls: t.c, virtual: b.virtual, access: b.access });
     }
     if (c.bases.length || d.bases.length) x.nonPod = true;

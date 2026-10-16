@@ -973,7 +973,7 @@ function execReturn(I: Interp, s: Extract<A.Stmt, { k: 'return' }>): Completion 
       }
       let v: V;
       if (s.e.k === 'init') { initFromBraces(I, rt, dest, s.e); I.retVal = { k: 'l', t: rt, a: dest, tmp: true }; return RETURN; }
-      v = evalExprInto(I, s.e, dest);
+      v = evalExprInto(I, s.e, dest, rt);
       if (v.k === 'l' && v.t.k === 'cls' && v.a === dest) { I.retVal = { k: 'l', t: rt, a: dest, tmp: true }; return RETURN; }
       // returning a local by name allows an implicit move
       let src: V = v;

@@ -582,7 +582,7 @@ function evalCond(I: Interp, e: Extract<A.Expr, { k: 'cond' }>, dest?: number): 
   const c = condValue(I, evalExpr(I, e.c));
   const chosen = c ? e.a : e.b;
   const other = c ? e.b : e.a;
-  const v = I.uneval ? evalExpr(I, chosen) : dest !== undefined ? evalExprInto(I, chosen, dest) : evalExpr(I, chosen);
+  const v = I.uneval ? evalExpr(I, chosen) : dest !== undefined ? evalExprInto(I, chosen, dest, I.destT) : evalExpr(I, chosen);
   if (v.k === 'l' && v.t.k !== 'cls' && v.t.k !== 'arr' && v.t.k !== 'fn' && !v.tmp) {
     // both operands lvalues of the same type: the result is an lvalue too (so  &(c ? a : b)  and  (c ? a : b) = 1  work)
     let o2: V | null = null;
@@ -1121,15 +1121,19 @@ function construct_value(I: Interp, to0: Type, e: Extract<A.Expr, { k: 'fcast' }
   return castValue(I, 'c', to, v, e);
 }
 
-export function evalExprInto(I: Interp, e: A.Expr, dest: number): V {
-  // copy elision: prvalues of class type are constructed straight into `dest`
-  if (e.k === 'call') return evalCall(I, e, dest);
-  if (e.k === 'fcast') {
-    const to = resolveTypeExpr(I, e.t, I.scope);
-    if (to.k === 'cls') return construct_value(I, to, e, dest);
-  }
-  if (e.k === 'cond') return evalCond(I, e, dest);
-  return evalExpr(I, e);
+export function evalExprInto(I: Interp, e: A.Expr, dest: number, destT?: Type): V {
+  // copy elision: prvalues of class type are constructed straight into `dest` — but only when they have the destination's type
+  const saved = I.destT;
+  I.destT = destT;
+  try {
+    if (e.k === 'call') return evalCall(I, e, dest);
+    if (e.k === 'fcast') {
+      const to = resolveTypeExpr(I, e.t, I.scope);
+      if (to.k === 'cls' && (!destT || (destT.k === 'cls' && destT.c === to.c))) return construct_value(I, to, e, dest);
+    }
+    if (e.k === 'cond') return evalCond(I, e, dest);
+    return evalExpr(I, e);
+  } finally { I.destT = saved; }
 }
 
 // ---- new / delete -------------------------------------------------------------------------------------------------------------------------------

@@ -782,7 +782,7 @@ export function callValue(I: Interp, callee: V, args: V[], dest: number | undefi
       const t = callee.t;
       if (t.k === 'cls') {
         if (I.uneval) return { k: 'l', t, a: 0, tmp: true };
-        const a = dest ?? newTempObj(I, t);
+        const a = dest !== undefined && (!I.destT || (I.destT.k === 'cls' && I.destT.c === t.c)) ? dest : newTempObj(I, t);
         construct(I, t, a, args);
         return { k: 'l', t, a, tmp: true };
       }
@@ -988,7 +988,7 @@ export function invokeFn(I: Interp, fn0: Fn, self0: V | undefined, args: V[], de
   const retT = sig.ret;
   let retAddr: number | undefined;
   if (retT.k === 'cls') {
-    retAddr = dest ?? newTempObj(I, retT);
+    retAddr = dest !== undefined && (!I.destT || (I.destT.k === 'cls' && I.destT.c === retT.c)) ? dest : newTempObj(I, retT);
   }
   return runFrame(I, fn, sig, self, bound, retAddr, args);
 }
@@ -1239,7 +1239,7 @@ function enterFrame(I: Interp, fn: Fn, sig: Sig, self: Extract<V, { k: 'l' }> | 
 }
 
 function paramSize(I: Interp, b: Bound): number {
-  const t = b.t;
+  const t = b.kind === 'raw' && b.v && (b.v.k === 'i' || b.v.k === 'f') ? b.v.t : b.t; // C-variadic slots take the promoted argument's size
   if (t.k === 'ref' || t.k === 'cls') return 8;
   return Math.max(1, sizeOf(t.k === 'arr' ? ptrTo(t.of) : t));
 }
@@ -1509,7 +1509,7 @@ export function initFromExpr(I: Interp, t: Type, addr: number, e: A.Expr) {
     return;
   }
   if (t.k === 'cls') {
-    const v = evalExprInto(I, e, addr);
+    const v = evalExprInto(I, e, addr, t);
     if (v.k === 'l' && v.t.k === 'cls' && v.a === addr && v.t.c === t.c) return; // constructed in place
     if (v.k === 'l' && v.t.k === 'cls' && v.t.c === t.c && v.tmp) {
       // the prvalue was materialised elsewhere: move/copy it

@@ -1,0 +1,31 @@
+8 16 16
+Node(1)
+11 1
+Node(2)
+~Node(1)
+2
+~Node(2)
+Node(10)
+2
+1 empty
+01
+locked 10 2
+~Node(10)
+1 1
+Node(20)
+Node(21)
+12
+~Node(20)
+~Node(21)
+2 5
+2
+2
+~Derived
+~Base
+~Derived
+~Base
+7
+14
+10
+custom delete 7
+end

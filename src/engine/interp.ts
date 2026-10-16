@@ -79,6 +79,8 @@ export class Interp {
   scope!: Scope;
   /** > 0 while evaluating without side effects (sizeof, decltype, return-type deduction) */
   uneval = 0;
+  /** class type of the object that evalExprInto is constructing in place (a prvalue may only be built at `dest` if it has this type) */
+  destT: Type | undefined = undefined;
   /** set while probing noexcept(expr): an unevaluated call to a potentially-throwing function was seen */
   canThrow = false;
   strictAccess = false;
