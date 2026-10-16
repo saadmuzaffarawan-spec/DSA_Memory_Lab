@@ -6,7 +6,7 @@ import { runProgram } from '../../src/engine/run';
 
 it.runIf(!!process.env.TRY)('try', () => {
   const src = readFileSync(process.env.TRY!, 'utf8');
-  const r = runProgram(src, { platform: (process.env.PLAT as any) || 'linux' });
+  const r = runProgram(src, { platform: (process.env.PLAT as any) || 'linux', stdin: process.env.STDIN ? readFileSync(process.env.STDIN, 'utf8') : undefined });
   if (r.compileError) console.log('COMPILE ERROR', JSON.stringify(r.compileError));
   console.log('--- stdout ---\n' + r.stdout);
   if (r.stderr) console.log('--- stderr ---\n' + r.stderr);

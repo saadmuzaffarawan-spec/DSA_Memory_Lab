@@ -75,7 +75,7 @@ class istream : public ios_base {
  public:
   istream(int fd = 0) : ios_base(fd) {}
   istream& __extract(...);
-  int __extractLine();
+  int __extractLine(int delim = 10);
   int __token();
   istream& operator>>(bool& v) { return __extract(v); }
   istream& operator>>(char& v) { return __extract(v); }
@@ -136,4 +136,11 @@ _Setfill setfill(char c) { _Setfill s; s.c = c; return s; }
 ostream& operator<<(ostream& os, _Setw w) { os._width = w.n; return os; }
 ostream& operator<<(ostream& os, _Setprecision p) { os._prec = p.n; return os; }
 ostream& operator<<(ostream& os, _Setfill f) { os._fill = f.c; return os; }
+
+const char* __lastInput();
+size_t __lastInputLen();
+inline ostream& operator<<(ostream& os, const string& s) { return os << s.c_str(); }
+inline istream& operator>>(istream& is, string& s) { if (is.__token()) s.assign(__lastInput(), __lastInputLen()); return is; }
+inline istream& getline(istream& is, string& s, char delim) { if (is.__extractLine(delim)) s.assign(__lastInput(), __lastInputLen()); else s.clear(); return is; }
+inline istream& getline(istream& is, string& s) { if (is.__extractLine(10)) s.assign(__lastInput(), __lastInputLen()); else s.clear(); return is; }
 }

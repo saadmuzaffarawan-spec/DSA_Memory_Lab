@@ -5,6 +5,6 @@ cd "$(dirname "$0")/../tests/programs"
 for f in *.cpp; do
   b="${f%.cpp}"
   g++ -std=c++17 -O0 -w -o "/tmp/stackyard_$b" "$f"
-  "/tmp/stackyard_$b" < /dev/null > "$b.expected" || true
+  "/tmp/stackyard_$b" < "$( [ -f "$b.in" ] && echo "$b.in" || echo /dev/null )" > "$b.expected" || true
 done
 echo "expected outputs regenerated"

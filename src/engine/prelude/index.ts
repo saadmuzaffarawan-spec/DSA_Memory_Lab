@@ -9,6 +9,7 @@ import cassert from './cassert.hpp?raw';
 import utility from './utility.hpp?raw';
 import algorithm from './algorithm.hpp?raw';
 import exception from './exception.hpp?raw';
+import string from './string.hpp?raw';
 import iostream from './iostream.hpp?raw';
 
 interface Chunk { src: string; deps: string[] }
@@ -24,7 +25,8 @@ const CHUNKS: Record<string, Chunk> = {
   utility: { src: utility, deps: ['core'] },
   algorithm: { src: algorithm, deps: ['core', 'utility'] },
   exception: { src: exception, deps: ['core', 'cstring'] },
-  iostream: { src: iostream, deps: ['core', 'utility', 'exception', 'cstdio', 'cstdlib', 'cstring', 'cmath', 'cctype'] },
+  string: { src: string, deps: ['core', 'cstdio', 'cstring', 'utility', 'exception', 'algorithm'] },
+  iostream: { src: iostream, deps: ['string', 'core', 'utility', 'exception', 'cstdio', 'cstdlib', 'cstring', 'cmath', 'cctype'] },
 };
 
 /** header name -> chunk */

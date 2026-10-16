@@ -507,6 +507,56 @@ export function registerNatives(I: Interp) {
     I2.print(msg + '\n', true);
     throw new Fault('assert', I2.plat.id === 'windows' ? 'abort() has been called (assertion failed)' : 'Aborted (core dumped)', undefined, 134);
   });
+  reg('std::__debug_assert', (I2, a) => {
+    const what = I2.cstr(addrOf(I2, a[0]));
+    I2.print(`Debug Assertion Failed!\n\nProgram: ...\\Project.exe\nFile: C:\\Program Files\\Microsoft Visual Studio\\VC\\Tools\\MSVC\\include\\xstring\n\nExpression: ${what}\n`, true);
+    throw new Fault('assert', 'abort() has been called (debug assertion failed)', undefined, 3);
+  });
+  // string -> number conversions used by std::stoi & friends: (text, size_t* consumed, base, int* err)  err: 1 = no digits, 2 = out of range
+  const parseInteger = (I2: Interp, a: V[], unsigned: boolean): V => {
+    const s = I2.cstr(addrOf(I2, a[0]));
+    const idxp = addrOf(I2, a[1]);
+    let base = intOf(I2, a[2]);
+    const errp = addrOf(I2, a[3]);
+    let i = 0;
+    while (i < s.length && /\s/.test(s[i])) i++;
+    let neg = false;
+    if (s[i] === '+' || s[i] === '-') { neg = s[i] === '-'; i++; }
+    if ((base === 0 || base === 16) && s[i] === '0' && (s[i + 1] === 'x' || s[i + 1] === 'X') && /[0-9a-fA-F]/.test(s[i + 2] ?? '')) { i += 2; base = 16; }
+    else if (base === 0 && s[i] === '0') base = 8;
+    else if (base === 0) base = 10;
+    const digits = '0123456789abcdefghijklmnopqrstuvwxyz'.slice(0, base);
+    const start = i;
+    let v = 0n;
+    while (i < s.length && digits.includes(s[i].toLowerCase())) { v = v * BigInt(base) + BigInt(digits.indexOf(s[i].toLowerCase())); i++; }
+    let err = 0;
+    if (i === start) { err = 1; i = 0; }
+    if (neg) v = -v;
+    const lo = unsigned ? 0n : -(1n << 63n), hi = unsigned ? (1n << 64n) - 1n : (1n << 63n) - 1n;
+    if (!err && (v < lo || v > hi) && !(unsigned && neg)) { err = 2; v = v < lo ? lo : hi; }
+    if (idxp) I2.mem.storeInt(idxp, 8, BigInt(i), 'consumed count');
+    I2.mem.storeInt(errp, 4, BigInt(err), 'error code');
+    return I2.mkInt(unsigned ? I2.T.ullong : I2.T.llong, BigInt.asIntN(64, v));
+  };
+  reg('std::__strtoll', (I2, a) => parseInteger(I2, a, false));
+  reg('std::__strtoull', (I2, a) => parseInteger(I2, a, true));
+  reg('std::__strtod', (I2, a) => {
+    const s = I2.cstr(addrOf(I2, a[0]));
+    const idxp = addrOf(I2, a[1]);
+    const errp = addrOf(I2, a[2]);
+    const m = /^\s*[+-]?(?:inf(?:inity)?|nan|(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?|0[xX][0-9a-fA-F]+)/i.exec(s);
+    let err = 0, v = 0, used = 0;
+    if (!m) err = 1;
+    else {
+      used = m[0].length;
+      const t = m[0].trim().toLowerCase();
+      v = /inf/.test(t) ? (t.startsWith('-') ? -Infinity : Infinity) : /nan/.test(t) ? NaN : /0x/.test(t) ? Number(t.replace('+', '')) : parseFloat(t);
+      if (!Number.isFinite(v) && !/inf|nan/.test(t)) err = 2;
+    }
+    if (idxp) I2.mem.storeInt(idxp, 8, BigInt(used), 'consumed count');
+    I2.mem.storeInt(errp, 4, BigInt(err), 'error code');
+    return ret.d(v);
+  });
   reg('std::terminate', (I2) => { throw new Fault('abort', 'terminate called without an active exception', undefined, 134); });
 
   // ---- iostream: output ----
@@ -536,11 +586,11 @@ export function registerNatives(I: Interp) {
     // a[0] = pointer to a std::string-like sink is handled in the prelude; this reads one line into a char buffer
     const is = osSelf(I2, self);
     if (I2.stdinPos >= I2.stdin.length) { setState(I2, is, 3); return ret.int(0); }
-    let end = I2.stdin.indexOf('\n', I2.stdinPos);
+    const delim = a.length ? String.fromCharCode(intOf(I2, a[0]) & 0xff) : '\n';
+    let end = I2.stdin.indexOf(delim, I2.stdinPos);
     let line: string;
     if (end < 0) { line = I2.stdin.slice(I2.stdinPos); I2.stdinPos = I2.stdin.length; } else { line = I2.stdin.slice(I2.stdinPos, end); I2.stdinPos = end + 1; }
-    if (line.endsWith('\r')) line = line.slice(0, -1);
-    void a;
+    if (delim === '\n' && line.endsWith('\r')) line = line.slice(0, -1);
     I2.lastLine = line;
     return ret.int(1);
   });
