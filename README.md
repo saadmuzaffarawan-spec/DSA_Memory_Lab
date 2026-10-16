@@ -4,6 +4,8 @@
 
 Created by **Saad Muzaffar Awan** · MIT licence · no backend, no account, runs entirely in your browser.
 
+![Stackyard showing a red-black tree](docs/img/map.png)
+
 ## What it is for
 
 Most C++ courses say "a pointer holds an address" and move on. Stackyard shows the address, the bytes behind it, the padding the compiler inserted, the hidden header the allocator wrote in front of your `new`, and what is left behind after `delete`.
@@ -13,7 +15,7 @@ Most C++ courses say "a pointer holds an address" and move on. Stackyard shows t
 - **Address space** – where globals, code, heap and stack live on the chosen platform, with zoomed stack and heap strips.
 - **Time travel** – step into / over / out, scrub a timeline, or go back. Library internals can be shown or hidden.
 - **Problems** – use after free, leaks, buffer overruns, uninitialised reads and crashes are explained in plain English, at the line that caused them.
-- **Quiz** – 45 tricky questions (sizes, padding, promotion, pointers, slicing, vector growth…). Predict first, then reveal. The "right answer" is whatever the simulator prints for the platform you chose, and every question is also checked against a real `g++` in the test suite.
+- **Quiz** – 65 tricky questions (sizes, padding, promotion, pointers, slicing, vector growth…). Predict first, then reveal. The "right answer" is whatever the simulator prints for the platform you chose, and every answer was cross-checked against a real `g++` on Linux. Windows and macOS answers follow the documented ABI and library layouts (see LIMITS.md).
 - **Three machines** – Windows x64 (MSVC Debug, the default), Linux x86-64 (GCC, glibc) and macOS (Apple Clang, libc++). Flip the switch and the same program shows different sizes, layouts and growth policies.
 
 ## Run it
