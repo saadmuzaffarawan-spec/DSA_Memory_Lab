@@ -109,6 +109,7 @@ export type Ent =
   | { k: 'fns'; name: string; fns: Fn[]; ftempls: FuncTemplate[] }
   | { k: 'type'; type: Type }
   | { k: 'ctempl'; t: ClassTemplate }
+  | { k: 'vtempl'; decl: A.VarDecl; dd: A.Declarator; scope: Scope; inst: Map<string, Ent> }
   | { k: 'ns'; scope: Scope }
   | { k: 'enumc'; type: Type; value: bigint }
   | { k: 'tval'; value: bigint; type: Type }

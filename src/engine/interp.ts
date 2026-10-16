@@ -13,7 +13,7 @@ import type { Fn, Frame, LocalObj, Scope, V } from './env';
 import { newScope } from './env';
 import type { ClassTemplate, TArgVal } from './env';
 import type * as A from './ast';
-import { completeClass, defineClassDecl, injectedClassName, instantiateClassTemplate } from './decls';
+import { completeClass, defineClassDecl, injectedClassName, instantiateClassTemplate, instantiateVarTemplate } from './decls';
 import { evalConstInt, expandPack, typeOfExpr } from './expr';
 import { destroyObj } from './call';
 import { bindingScope, deduceCtad } from './templ';
@@ -79,6 +79,8 @@ export class Interp {
   scope!: Scope;
   /** > 0 while evaluating without side effects (sizeof, decltype, return-type deduction) */
   uneval = 0;
+  /** set while probing noexcept(expr): an unevaluated call to a potentially-throwing function was seen */
+  canThrow = false;
   strictAccess = false;
   allowConstWrite = false;
   retVal: V | null = null;
@@ -304,6 +306,7 @@ export class Interp {
   completeClass(c: ClassInfo) { completeClass(this, c); }
   defineClassDecl(d: A.ClassDecl, scope: Scope) { return defineClassDecl(this, d, scope); }
   injectedClassName(ct: ClassTemplate, scope: Scope) { return injectedClassName(this, ct, scope); }
+  instantiateVarTemplate(ent: Extract<import('./env').Ent, { k: 'vtempl' }>, args: TArgVal[]) { return instantiateVarTemplate(this, ent, args); }
   instantiateClassTemplate(ct: ClassTemplate, args: TArgVal[]): Type { return instantiateClassTemplate(this, ct, args, this.global); }
   deduceCtad(ct: ClassTemplate, args: V[]): Type { return deduceCtad(this, ct, args); }
   typeNodeOf(t: Type): TypeNode { return typeNodeOf(this, t); }

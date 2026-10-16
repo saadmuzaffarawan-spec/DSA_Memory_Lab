@@ -1,6 +1,7 @@
 // Expression evaluation.
 import type * as A from './ast';
 import { Fault } from './memory';
+import { CompileError } from './lexer';
 import type { Interp } from './interp';
 import type { Fn, FuncTemplate, Scope, TArgVal, V } from './env';
 import { CxxThrow, newScope } from './env';
@@ -14,9 +15,10 @@ import {
 } from './typeres';
 import {
   callFnValue, callOperator, callValue, construct, convertTo, destroyObj, dynamicObject, hasNontrivialDtor, initFromBraces, initFromExpr, isDerivedPtrConv, materialize, newTempObj, upcastAddr,
-  valueInit, findConversionFn, invokeFn, releaseTemps,
+  valueInit, findConversionFn, invokeFn, releaseTemps, probeConstruct,
 } from './call';
 import { makeLambdaClass } from './decls';
+import { evalTrait } from './traits';
 
 type Id = Extract<A.Expr, { k: 'id' }>;
 
@@ -145,8 +147,9 @@ export function evalExpr(I: Interp, e: A.Expr): V {
     case 'delete': return evalDelete(I, e);
     case 'lambda': return evalLambda(I, e);
     case 'init': return { k: 'init', items: [], node: e };
-    case 'throw': return evalThrow(I, e);
-    case 'noexcept': return I.mkBool(true);
+    case 'throw': if (I.uneval) { I.canThrow = true; return I.voidV(); } return evalThrow(I, e);
+    case 'noexcept': return I.mkBool(!probeCanThrow(I, e.e));
+    case 'trait': return I.mkBool(evalTrait(I, e.name, e.types.map((t) => resolveTypeExpr(I, t, I.scope))));
     case 'fold': return evalFold(I, e);
     case 'expand': I.cerr('a pack expansion can only appear in an argument list, braced list or fold expression', e.pos);
     case 'type': return { k: 'type', t: resolveTypeExpr(I, e.t, I.scope) };
@@ -261,6 +264,11 @@ export function evalId(I: Interp, e: Id): V {
     case 'tval': return { k: 'i', t: ent.type, v: ent.value };
     case 'type': return { k: 'type', t: ent.type };
     case 'ctempl': return { k: 'tmpl', ent: ent.t };
+    case 'vtempl': {
+      if (!last.targs) I.cerr(`'${name}' is a variable template and needs template arguments`, e.pos);
+      const v = I.instantiateVarTemplate(ent, evalTArgs(I, last.targs, I.scope));
+      return varLv(I, v.type, v.addr);
+    }
     case 'ns': I.cerr(`'${name}' is a namespace, not a value`, e.pos);
     case 'pack': {
       const idx = I.packIdx.get(last.id);
@@ -1035,6 +1043,16 @@ function dynamicTarget(I: Interp, srcCls: ClassInfo, target: ClassInfo, addr: nu
 }
 function isPolymorphicAny(c: ClassInfo): boolean { return c.declaresVirtual || c.bases.some((b) => isPolymorphicAny(b.cls)); }
 
+/** noexcept(expr): evaluated without side effects; true unless the expression calls a function that may throw or contains a throw */
+function probeCanThrow(I: Interp, x: A.Expr): boolean {
+  const saved = I.canThrow;
+  I.canThrow = false;
+  try { unevaluated(I, () => evalExpr(I, x)); } catch (err) { if (err instanceof CompileError) throw err; I.canThrow = true; }
+  const r = I.canThrow;
+  I.canThrow = saved;
+  return r;
+}
+
 export function throwStd(I: Interp, cls: string, display: string): never {
   const r = lookupQName(I, { parts: [{ id: 'std' }, { id: cls }], pos: { line: 0, col: 0 } }, I.global);
   const ent = r?.ents.find((x) => x.k === 'type');
@@ -1055,7 +1073,7 @@ function construct_value(I: Interp, to0: Type, e: Extract<A.Expr, { k: 'fcast' }
   // class template argument deduction:  vector v = vector(…)   /  Stack(5)
   if ((to as any).ctad) to = I.deduceCtad((to as any).ctad, e.args.map((a) => evalExpr(I, a)));
   if (to.k === 'cls') {
-    if (I.uneval) return { k: 'l', t: to, a: 0, tmp: true };
+    if (I.uneval) { if (!e.brace) probeConstruct(I, to, evalArgs(I, e.args)); return { k: 'l', t: to, a: 0, tmp: true }; }
     const a = dest ?? newTempObj(I, to);
     if (e.brace) initFromBraces(I, to, a, { k: 'init', items: e.args, pos: e.pos });
     else {
@@ -1091,7 +1109,7 @@ export function evalExprInto(I: Interp, e: A.Expr, dest: number): V {
 // ---- new / delete -------------------------------------------------------------------------------------------------------------------------------
 function evalNew(I: Interp, e: Extract<A.Expr, { k: 'new' }>): V {
   const elem = resolveTypeExpr(I, e.t, I.scope);
-  if (I.uneval) return I.mkPtr(elem, 0);
+  if (I.uneval) { I.canThrow = true; return I.mkPtr(elem, 0); }
   // placement new  new (p) T(args)
   let nothrowTag = false;
   if (e.place.length) {

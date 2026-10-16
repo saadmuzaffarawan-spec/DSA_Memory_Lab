@@ -95,7 +95,9 @@ export function declareFunction(I: Interp, d: A.FuncDecl, scope: Scope) {
 
 function sameTemplateDecl(a: A.FuncDecl, b: A.FuncDecl): boolean {
   if (a.params.length !== b.params.length) return false;
-  return JSON.stringify(a.params.map((p) => p.type), replacer) === JSON.stringify(b.params.map((p) => p.type), replacer);
+  // template signatures include the return type and the template parameter list (that is what makes enable_if overloads distinct)
+  const sig = (f: A.FuncDecl) => JSON.stringify([f.params.map((p) => p.type), f.ret, f.tparams, f.constMethod], replacer);
+  return sig(a) === sig(b);
 }
 const replacer = (k: string, v: unknown) => (k === 'pos' ? undefined : typeof v === 'bigint' ? v.toString() : v);
 
@@ -368,7 +370,27 @@ export function declaredType(I: Interp, dd: A.Declarator, scope: Scope): Type {
   return t;
 }
 
+export function instantiateVarTemplate(I: Interp, ent: Extract<Ent, { k: 'vtempl' }>, args: TArgVal[]): Extract<Ent, { k: 'var' }> {
+  const tps = ent.decl.tparams ?? [];
+  const b = bindArgs(I, tps, args, ent.dd.name);
+  const key = bindingsKey(tps, b);
+  const hit = ent.inst.get(key);
+  if (hit && hit.k === 'var') return hit;
+  const bscope = bindingScope(I, ent.scope, b, ent.dd.name);
+  const plain: A.VarDecl = { ...ent.decl, tparams: null, decls: [ent.dd] };
+  const placeholder: Ent = { k: 'var', name: ent.dd.name, type: I.T.int, addr: 0 };
+  ent.inst.set(key, placeholder);
+  declareGlobalVar(I, plain, bscope);
+  const made = bscope.names.get(ent.dd.name)?.find((x) => x.k === 'var') as Extract<Ent, { k: 'var' }>;
+  ent.inst.set(key, made);
+  return made;
+}
+
 export function declareGlobalVar(I: Interp, d: A.VarDecl, scope: Scope) {
+  if (d.tparams && d.tparams.length) {
+    for (const dd of d.decls) addEnt(scope, dd.name, { k: 'vtempl', decl: d, dd, scope, inst: new Map() });
+    return;
+  }
   for (const dd of d.decls) {
     if (dd.type.k === 'fn') continue; // function declaration written as a variable
     const qn = dd.qname;

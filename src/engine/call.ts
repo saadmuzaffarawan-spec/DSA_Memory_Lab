@@ -10,6 +10,7 @@ import {
   arrOf, clsType, constOf, intInfo, isFloat, isInt, ptrTo, sameType, stripCv, stripRef, typeStr, withCv, prettyType, type ClassInfo, type FieldInfo, type Type,
 } from './types';
 import { alignOf, sizeOf } from './layout';
+import { fnIsNoexcept } from './traits';
 import { convertScalar, promote } from './arith';
 import {
   adjustParam, baseOffsetOf, evalTArgs, findMember, isAuto, isBaseOf, lookupUnqualified, resolveTypeExpr, targKey, tryResolveType, typeKey,
@@ -947,7 +948,10 @@ export function invokeFn(I: Interp, fn0: Fn, self0: V | undefined, args: V[], de
     return fn.native(I, args, self, dest);
   }
   const sig = ensureRet(I, fn);
-  if (I.uneval) return defaultV(I, sig.ret);
+  if (I.uneval) {
+    if (!fnIsNoexcept(I, fn, fn.isDtor ? 'dtor' : fn.special === 'copy' ? (fn.isCtor ? 'copy' : 'copy-assign') : fn.special === 'move' ? (fn.isCtor ? 'move' : 'move-assign') : fn.special === 'cassign' ? 'copy-assign' : fn.special === 'massign' ? 'move-assign' : 'default')) I.canThrow = true;
+    return defaultV(I, sig.ret);
+  }
   if (!fn.decl?.body && !fn.special && !(fn.decl && fn.decl.defaulted)) {
     I.cerr(`undefined reference to '${fn.qual}${fn.decl && !fn.isDtor ? '(' + sig.params.map((p) => typeStr(p)).join(', ') + ')' : ''}' (the function is declared but never defined, so the linker fails)`);
   }
@@ -1292,6 +1296,17 @@ function popFrame(I: Interp, frame: Frame, scope: Scope) {
 // =====================================================================================================================
 // construction
 // =====================================================================================================================
+/** unevaluated construction  T(args): record whether the selected constructor may throw (for noexcept(expr)) */
+export function probeConstruct(I: Interp, t: Type, args: V[]) {
+  if (t.k !== 'cls') return;
+  I.completeClass(t.c);
+  const ctors = t.c.x.ctors as Fn[];
+  let fn: Fn | undefined;
+  if (args.length === 0) fn = ctors.find((f) => f.special === 'ctor0' || (!f.special && getSig(I, f).params.every((_, i) => getSig(I, f).defaults[i])));
+  else { try { fn = pickOverload(I, ctors, t.c.x.ctorTemplates as FuncTemplate[], args, { name: t.c.name, self: undefined }); } catch { fn = undefined; } }
+  if (fn && !fnIsNoexcept(I, fn, fn.special === 'copy' ? 'copy' : fn.special === 'move' ? 'move' : 'default')) I.canThrow = true;
+}
+
 export function hasNontrivialDtor(I: Interp, t: Type): boolean {
   if (t.k === 'arr') return hasNontrivialDtor(I, t.of);
   if (t.k !== 'cls') return false;

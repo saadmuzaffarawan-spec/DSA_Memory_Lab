@@ -78,7 +78,8 @@ export type Expr =
   | { k: 'fold'; op: string; pack: Expr; init?: Expr; left: boolean; pos: Pos }
   | { k: 'expand'; e: Expr; pos: Pos }
   | { k: 'type'; t: TypeExpr; pos: Pos }
-  | { k: 'noexcept'; e: Expr; pos: Pos };
+  | { k: 'noexcept'; e: Expr; pos: Pos }
+  | { k: 'trait'; name: string; types: TypeExpr[]; pos: Pos };
 
 export interface LambdaCap { name: string; byRef: boolean; init?: Expr; this?: boolean; pack?: boolean }
 
@@ -105,6 +106,8 @@ export interface VarDecl {
   pos: Pos;
   alignas?: Expr;
   mutable?: boolean;
+  /** variable template:  template <class T> constexpr bool v = ...; */
+  tparams?: TemplateParam[] | null;
 }
 
 export type Stmt =
@@ -151,6 +154,7 @@ export interface FuncDecl {
   constMethod: boolean;
   refQual: '' | '&' | '&&';
   noexcept: boolean;
+  noexceptCond?: Expr;
   deleted: boolean;
   defaulted: boolean;
   ctorInit: Array<{ name: QName; args: Expr[]; brace: boolean; pack?: boolean }> | null;

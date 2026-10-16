@@ -383,6 +383,7 @@ export class Parser {
     }
     this.expect(';', 'after declaration');
     const v: VarDecl = { k: 'var', spec, decls: declarators, storage: ds.storage, constexpr: ds.constexpr, pos: startPos, alignas: ds.alignas, mutable: ds.mutable };
+    if (cx.tparams && !cx.inClass) { v.tparams = cx.tparams; for (const dd of declarators) this.ctx.templNames.add(dd.name); }
     if (cx.inClass) return v;
     return v;
   }
@@ -434,7 +435,7 @@ export class Parser {
     for (;;) {
       if (this.isId('override')) { this.p++; f.override = true; continue; }
       if (this.isId('final')) { this.p++; f.final = true; continue; }
-      if (this.isId('noexcept')) { this.p++; f.noexcept = true; if (this.isOp('(')) this.skipParens(); continue; }
+      if (this.isId('noexcept')) { this.p++; f.noexcept = true; if (this.isOp('(')) { this.p++; const ce = this.parseCond(); this.expect(')'); f.noexceptCond = ce; } continue; }
       break;
     }
     if (this.isOp('=')) {
@@ -493,7 +494,7 @@ export class Parser {
       if (this.isId('const')) { this.p++; f.constMethod = true; continue; }
       if (this.isId('override')) { this.p++; f.override = true; continue; }
       if (this.isId('final')) { this.p++; f.final = true; continue; }
-      if (this.isId('noexcept')) { this.p++; f.noexcept = true; if (this.isOp('(')) this.skipParens(); continue; }
+      if (this.isId('noexcept')) { this.p++; f.noexcept = true; if (this.isOp('(')) { this.p++; const ce = this.parseCond(); this.expect(')'); f.noexceptCond = ce; } continue; }
       break;
     }
     if (this.isOp('=')) {
@@ -1518,6 +1519,13 @@ export class Parser {
           break;
         }
       }
+    }
+    if (t.k === 'id' && t.s.startsWith('__is_') && this.isOpAt(1, '(')) {
+      this.p += 2;
+      const types: TypeExpr[] = [];
+      for (;;) { types.push(this.parseTypeId()); if (!this.accept(',')) break; }
+      this.expect(')');
+      return { k: 'trait', name: t.s, types, pos };
     }
     if (t.k === 'id') {
       switch (t.s) {
