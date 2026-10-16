@@ -14,6 +14,7 @@ export interface ParseCtx {
   /** names that are definitely values (not types) when they clash, e.g. function names */
 }
 
+let anonCounter = 0;
 export function newParseCtx(): ParseCtx {
   return { typeNames: new Set(), templNames: new Set(), funcTempls: new Set() };
 }
@@ -557,6 +558,7 @@ export class Parser {
         const c = this.parseClassSpecifier();
         if (c.defined || this.isOp(';')) { ds.classDecl = c; if (this.isOp(';') || this.isOp('}')) { ds.spec = null; return ds; } }
         // used as a type:  struct S x;   or class definition followed by declarators
+        if (c.defined && !c.name) c.name = `(anonymous ${c.tag} #${++anonCounter})`;
         ds.spec = c.defined ? { k: 'spec', base: { k: 'name', q: { parts: [{ id: c.name }], pos: c.pos } }, pos: c.pos } : { k: 'spec', base: { k: 'elab', tag: c.tag, q: { parts: [{ id: c.name }], pos: c.pos } }, pos: c.pos };
         if (!c.defined) ds.classDecl = undefined;
         haveType = true;

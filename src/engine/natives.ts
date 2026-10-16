@@ -7,6 +7,7 @@ import { callFnValue, invokeFn } from './call';
 import { formatPrintf, fmtExp, fmtFixed, fmtG, nonFinite, pointerText } from './fmt';
 import { S } from './trace';
 import { sizeOf } from './layout';
+import { throwStd } from './expr';
 import type { Type } from './types';
 
 type NT = NativeFn;
@@ -229,6 +230,10 @@ function extractInto(I: Interp, is: number, target: V): void {
   I.cerr(`no operator>> for type '${t.k}'`);
 }
 
+function throwBadAlloc(I: Interp): never {
+  return throwStd(I, 'bad_alloc', 'std::bad_alloc');
+}
+
 // ---- registration ----------------------------------------------------------------------------------------------------------------
 export function registerNatives(I: Interp) {
   const T = I.nativeTable;
@@ -307,6 +312,22 @@ export function registerNatives(I: Interp) {
     }
     return ret.int(n);
   });
+
+  // ---- operator new / delete and exception message strings ----
+  reg('operator new', (I2, a) => { const p = I2.heap.malloc(intOf(I2, a[0]), 'operator new'); if (!p) return throwBadAlloc(I2); return ret.ptr(p); });
+  reg('operator new[]', (I2, a) => { const p = I2.heap.malloc(intOf(I2, a[0]), 'operator new[]'); if (!p) return throwBadAlloc(I2); return ret.ptr(p); });
+  reg('operator delete', (I2, a) => { const p = addrOf(I2, a[0]); if (p) I2.heap.free(p, 'operator delete'); return ret.void(); });
+  reg('operator delete[]', (I2, a) => { const p = addrOf(I2, a[0]); if (p) I2.heap.free(p, 'operator delete[]'); return ret.void(); });
+  reg('std::__exc_dup', (I2, a) => {
+    const src = addrOf(I2, a[0]);
+    if (!src) return ret.cptr(0);
+    const s = I2.cstr(src);
+    const bytes = new TextEncoder().encode(s + '\0');
+    const p = I2.heap.malloc(bytes.length, 'exception string');
+    I2.mem.write(p, bytes, 'exception text');
+    return ret.cptr(p);
+  });
+  reg('std::__exc_free', (I2, a) => { const p = addrOf(I2, a[0]); if (p) I2.heap.free(p, 'exception string'); return ret.void(); });
 
   // ---- stdlib ----
   reg('malloc', (I2, a) => ret.ptr(I2.heap.malloc(intOf(I2, a[0]), 'malloc')));

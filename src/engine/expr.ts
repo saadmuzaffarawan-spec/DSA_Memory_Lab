@@ -1093,7 +1093,12 @@ function evalNew(I: Interp, e: Extract<A.Expr, { k: 'new' }>): V {
   const elem = resolveTypeExpr(I, e.t, I.scope);
   if (I.uneval) return I.mkPtr(elem, 0);
   // placement new  new (p) T(args)
+  let nothrowTag = false;
   if (e.place.length) {
+    const first = evalExpr(I, e.place[0]);
+    if (first.k === 'l' && first.t.k === 'cls' && first.t.c.name === 'nothrow_t') { nothrowTag = true; }
+  }
+  if (e.place.length && !nothrowTag) {
     const place = I.rv(evalExpr(I, e.place[0]));
     if (place.k !== 'i') I.cerr('placement new needs an address');
     if (e.place.length === 1 && place.t.k === 'ptr') {
@@ -1103,7 +1108,7 @@ function evalNew(I: Interp, e: Extract<A.Expr, { k: 'new' }>): V {
       return I.mkPtr(elem, addr);
     }
   }
-  const nothrow = e.place.length > 0;
+  const nothrow = nothrowTag;
   if (e.arr) {
     const nv = I.rv(evalExpr(I, e.arr));
     if (nv.k !== 'i' && nv.k !== 'f') I.cerr('array size must be a number');
@@ -1119,7 +1124,7 @@ function evalNew(I: Interp, e: Extract<A.Expr, { k: 'new' }>): V {
     const rec = I.heap.live.get(raw);
     if (rec) I.typeInfo[rec.id] = I.typeNodeOf(arrOf(elem, n));
     // construct elements
-    if (elem.k === 'cls') {
+    if (elem.k === 'cls' && !(e.brace && e.args)) {
       const args = e.args;
       for (let i = 0; i < n; i++) {
         if (args && args.length === 0 || !args) construct(I, elem, first + i * esz, [], e.args ? 'value' : 'default');

@@ -144,7 +144,7 @@ export function valueType(v: V): Type | null {
 export function rankConv(I: Interp, arg: V, P: Type): number | null {
   if (P.k === 'ref') {
     const target = P.to;
-    if (arg.k === 'init') return target.k === 'cls' || target.k === 'arr' ? 4 : null;
+    if (arg.k === 'init') return target.k === 'cls' || target.k === 'arr' ? (P.rv ? 4 : 4.1) : null; // a braced list is a temporary: T&& beats const T&
     if (arg.k === 'l' && !isRvalue(arg)) {
       // lvalue
       if (P.rv) return null;

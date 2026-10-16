@@ -76,6 +76,17 @@ export function isBaseOf(base: ClassInfo, derived: ClassInfo): boolean {
   return derived.bases.some((b) => isBaseOf(base, b.cls));
 }
 
+function findAnon(ac: ClassInfo, name: string, off: number): { field: FieldInfo; off: number } | null {
+  const fld = ac.x.fieldMap?.get(name) as FieldInfo | undefined;
+  if (fld) return { field: fld, off };
+  for (const af of ac.fields) {
+    if (!af.anonymous || af.type.k !== 'cls') continue;
+    const r = findAnon(af.type.c, name, off + (af.offset ?? 0));
+    if (r) return r;
+  }
+  return null;
+}
+
 export function findMember(I: Interp, cls: ClassInfo, name: string): MemberHit | null {
   const seen = new Set<ClassInfo>();
   const hits: MemberHit[] = [];
@@ -84,6 +95,13 @@ export function findMember(I: Interp, cls: ClassInfo, name: string): MemberHit |
     const x = c.x;
     const fld = x.fieldMap?.get(name) as FieldInfo | undefined;
     if (fld) { hits.push({ ents: [], field: fld, owner: c, baseOffset: off }); return true; }
+    // members of anonymous unions / structs are members of the enclosing class
+    for (const af of c.fields) {
+      if (!af.anonymous || af.type.k !== 'cls') continue;
+      if (!c.layout && !c.x.completing) I.layoutOf(c);
+      const inner = findAnon(af.type.c, name, off + (af.offset ?? 0));
+      if (inner) { hits.push({ ents: [], field: inner.field, owner: c, baseOffset: inner.off }); return true; }
+    }
     const ents = x.scope?.names.get(name);
     if (ents && ents.length) { hits.push({ ents, owner: c, baseOffset: off }); return true; }
     let found = false;

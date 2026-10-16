@@ -7,6 +7,8 @@ import cmath from './cmath.hpp?raw';
 import cctype from './cctype.hpp?raw';
 import cassert from './cassert.hpp?raw';
 import utility from './utility.hpp?raw';
+import algorithm from './algorithm.hpp?raw';
+import exception from './exception.hpp?raw';
 import iostream from './iostream.hpp?raw';
 
 interface Chunk { src: string; deps: string[] }
@@ -20,12 +22,14 @@ const CHUNKS: Record<string, Chunk> = {
   cctype: { src: cctype, deps: ['core'] },
   cassert: { src: cassert, deps: ['core'] },
   utility: { src: utility, deps: ['core'] },
-  iostream: { src: iostream, deps: ['core', 'utility', 'cstdio', 'cstdlib', 'cstring', 'cmath', 'cctype'] },
+  algorithm: { src: algorithm, deps: ['core', 'utility'] },
+  exception: { src: exception, deps: ['core', 'cstring'] },
+  iostream: { src: iostream, deps: ['core', 'utility', 'exception', 'cstdio', 'cstdlib', 'cstring', 'cmath', 'cctype'] },
 };
 
 /** header name -> chunk */
 const HEADERS: Record<string, string> = {
-  utility: 'utility', type_traits: 'utility', functional: 'utility',
+  algorithm: 'algorithm', numeric: 'algorithm', iterator: 'algorithm', utility: 'utility', type_traits: 'utility', functional: 'utility',
   iostream: 'iostream', istream: 'iostream', ostream: 'iostream', iomanip: 'iostream',
   cstdio: 'cstdio', 'stdio.h': 'cstdio', cstdlib: 'cstdlib', 'stdlib.h': 'cstdlib', cstring: 'cstring', 'string.h': 'cstring',
   cmath: 'cmath', 'math.h': 'cmath', cctype: 'cctype', 'ctype.h': 'cctype', cassert: 'cassert', 'assert.h': 'cassert',
