@@ -1622,6 +1622,53 @@ function initElement(I: Interp, t: Type, addr: number, e: A.Expr) {
   I.store(t, addr, convertTo(I, v, stripCv(t), e));
 }
 
+function isAggregateType(I: Interp, t: Type): boolean {
+  if (t.k === 'arr') return true;
+  if (t.k !== 'cls') return false;
+  I.completeClass(t.c);
+  return !!t.c.x.aggregate && !(t.c.x.ctors as Fn[]).some((f) => f.userProvided || !f.special);
+}
+
+/** does this brace-less item start an elided sub-aggregate (rather than initialise the whole member)? */
+function isElidedAggregate(I: Interp, ft: Type, item: A.Expr): boolean {
+  const t = stripCv(ft);
+  if (!isAggregateType(I, t)) return false;
+  if (t.k === 'arr') return !(item.k === 'str' && t.of.k === 'int');
+  const vt = unevaluated(I, () => evalExpr(I, item));
+  const at = vt.k === 'l' || vt.k === 'i' || vt.k === 'f' ? vt.t : null;
+  if (at && at.k === 'cls' && t.k === 'cls' && (at.c === t.c || isBaseOf(t.c, at.c))) return false;
+  return true;
+}
+
+/** initialise aggregate `t` at addr from items[start..] with brace elision; returns the index of the first unused item */
+function consumeInto(I: Interp, t0: Type, addr: number, items: A.Expr[], start: number, e: Extract<A.Expr, { k: 'init' }>): number {
+  const t = stripCv(t0);
+  let i = start;
+  if (t.k === 'arr') {
+    const es = sizeOf(t.of);
+    const n = t.n ?? 0;
+    for (let k = 0; k < n; k++) {
+      const at = addr + k * es;
+      if (i >= items.length) { valueInit(I, t.of, at); continue; }
+      const it = items[i];
+      if (it.k !== 'init' && isElidedAggregate(I, t.of, it)) i = consumeInto(I, t.of, at, items, i, e);
+      else { initElement(I, t.of, at, it); i++; }
+    }
+    return i;
+  }
+  if (t.k === 'cls') {
+    const fields = t.c.fields.filter((f) => !f.isStatic);
+    for (const f of fields) {
+      if (i >= items.length) { initFieldDefault(I, f, addr, t.c, true); continue; }
+      const it = items[i];
+      if (it.k !== 'init' && f.bits === undefined && isElidedAggregate(I, f.type, it)) i = consumeInto(I, f.type, addr + (f.offset ?? 0), items, i, e);
+      else { initElementField(I, f, addr, it); i++; }
+    }
+    return i;
+  }
+  return i;
+}
+
 function initAggregate(I: Interp, t: Extract<Type, { k: 'cls' }>, addr: number, e: Extract<A.Expr, { k: 'init' }>) {
   const c = t.c;
   const items = e.items;
@@ -1653,7 +1700,13 @@ function initAggregate(I: Interp, t: Extract<Type, { k: 'cls' }>, addr: number, 
   }
   for (const f of fields) {
     if (i < items.length) {
-      const it = items[i++];
+      const it = items[i];
+      if (it.k !== 'init' && f.bits === undefined && isElidedAggregate(I, f.type, it)) {
+        // brace elision:  std::array<int,3> a = {1, 2, 3};  — the flat list fills the nested aggregate
+        i = consumeInto(I, f.type, addr + (f.offset ?? 0), items, i, e);
+        continue;
+      }
+      i++;
       initElementField(I, f, addr, it);
     } else initFieldDefault(I, f, addr, c, true);
   }
