@@ -902,8 +902,10 @@ export class Parser {
       while (!(this.isOp('>') || this.isOp('>>') || this.isOp('>=') || this.isOp('>>='))) {
         // type or expression?
         const asType = this.try(() => {
+          this.sawPackDecl = false;
           const t = this.parseTypeId();
-          const pack = this.accept('...');
+          const pack = this.accept('...') || this.sawPackDecl; // `T&...` is swallowed by the declarator parser
+          this.sawPackDecl = false;
           if (!(this.isOp(',') || this.isOp('>') || this.isOp('>>') || this.isOp('>=') || this.isOp('>>='))) throw new CompileError('not a type argument');
           return { t, pack };
         });

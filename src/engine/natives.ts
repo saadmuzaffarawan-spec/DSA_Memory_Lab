@@ -163,6 +163,7 @@ function streamWrite(I: Interp, os: number, s: string, numeric: boolean) {
     sputInt(I, os + OS.width, 0);
   }
   const fd = sgetInt(I, os + OS.fd);
+  if (fd >= 100) { const ss = I.sstreams.get(fd); if (ss) ss.text += out; return; }
   I.print(out, fd === 2);
 }
 
@@ -201,12 +202,14 @@ function extractInto(I: Interp, is: number, target: V): void {
     const hi = signed ? (1n << BigInt(bytes * 8 - 1)) - 1n : (1n << BigInt(bytes * 8)) - 1n;
     if (v < lo || v > hi) { v = v < lo ? lo : hi; setState(I, is, 2); }
     I.mem.storeInt(target.a, bytes, v, 'variable');
+    if (I.stdinPos >= I.stdin.length) setState(I, is, 1);
     return;
   }
   if (t.k === 'bool') {
     const tok = readToken(I);
     I.mem.storeInt(target.a, 1, tok === '1' ? 1n : 0n, 'variable');
     if (tok !== '0' && tok !== '1') setState(I, is, 2);
+    if (I.stdinPos >= I.stdin.length) setState(I, is, 1);
     return;
   }
   if (t.k === 'float') {
@@ -215,6 +218,7 @@ function extractInto(I: Interp, is: number, target: V): void {
     if (!m) { setState(I, is, 2); return; }
     I.stdinPos += m[0].length;
     I.store(t, target.a, I.mkFloat(t, parseFloat(m[0])), 'variable');
+    if (I.stdinPos >= I.stdin.length) setState(I, is, 1);
     return;
   }
   if (t.k === 'arr' && t.of.k === 'int' && t.of.bytes === 1) {
@@ -225,6 +229,7 @@ function extractInto(I: Interp, is: number, target: V): void {
     out.set(bytes);
     if (out.length > cap) I.diag('heap-overflow', 'error', 'cin >> into a char array that is too small', `The input "${tok}" needs ${out.length} bytes (with the terminating NUL) but the array holds only ${cap}. The extra bytes overwrite whatever follows the array.`, target.a, out.length);
     I.mem.write(target.a, out, 'char array');
+    if (I.stdinPos >= I.stdin.length) setState(I, is, 1);
     return;
   }
   I.cerr(`no operator>> for type '${t.k}'`);
@@ -600,6 +605,7 @@ export function registerNatives(I: Interp) {
     skipWs(I2);
     if (peekc(I2) < 0) { setState(I2, is, 3); return ret.int(0); }
     I2.lastLine = readToken(I2);
+    if (I2.stdinPos >= I2.stdin.length) setState(I2, is, 1);
     return ret.int(1);
   });
   reg('std::istream::get', (I2, _a, self) => {
@@ -623,5 +629,23 @@ export function registerNatives(I: Interp) {
     return ret.cptr(buf);
   });
   reg('std::__lastInputLen', (I2) => ret.sz(new TextEncoder().encode(I2.lastLine).length));
+
+  // ---- in-memory streams: istringstream / ostringstream / stringstream share one text buffer per id ----
+  reg('std::__ss_new', (I2) => { const id = I2.nextSid++; I2.sstreams.set(id, { text: '', pos: 0 }); return ret.int(id); });
+  reg('std::__ss_set', (I2, a) => { const id = intOf(I2, a[0]); I2.sstreams.set(id, { text: I2.cstr(addrOf(I2, a[1])), pos: 0 }); return ret.void(); });
+  reg('std::__ss_text', (I2, a) => { I2.lastLine = I2.sstreams.get(intOf(I2, a[0]))?.text ?? ''; return ret.void(); });
+  for (const k of ['__extract', '__extractLine', '__token', 'get', 'peek', 'ignore', '__atEnd']) {
+    const name = 'std::istream::' + k;
+    const f = T.get(name);
+    if (!f) continue;
+    T.set(name, (I2, a, self, dest) => {
+      const fd = self && self.k === 'l' ? sgetInt(I2, self.a + OS.fd) : 0;
+      const ss = fd >= 100 ? I2.sstreams.get(fd) : undefined;
+      if (!ss) return f(I2, a, self, dest);
+      const saved = [I2.stdin, I2.stdinPos] as const;
+      I2.stdin = ss.text; I2.stdinPos = ss.pos;
+      try { return f(I2, a, self, dest); } finally { ss.pos = I2.stdinPos; I2.stdin = saved[0]; I2.stdinPos = saved[1]; }
+    });
+  }
   void sizeOf;
 }

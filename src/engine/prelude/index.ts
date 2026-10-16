@@ -16,6 +16,9 @@ import deque from './deque.hpp?raw';
 import memory from './memory.hpp?raw';
 import tree from './tree.hpp?raw';
 import iostream from './iostream.hpp?raw';
+import sstream from './sstream.hpp?raw';
+import limits from './limits.hpp?raw';
+import functional from './functional.hpp?raw';
 
 interface Chunk { src: string; deps: string[] }
 
@@ -36,14 +39,17 @@ const CHUNKS: Record<string, Chunk> = {
   deque: { src: deque, deps: ['core', 'cstdio', 'utility', 'exception', 'algorithm', 'vector'] },
   memory: { src: memory, deps: ['core', 'utility', 'exception'] },
   tree: { src: tree, deps: ['core', 'utility', 'exception', 'algorithm', 'vector'] },
+  limits: { src: limits, deps: ['core'] },
+  functional: { src: functional, deps: ['core', 'utility', 'exception'] },
   iostream: { src: iostream, deps: ['string', 'core', 'utility', 'exception', 'cstdio', 'cstdlib', 'cstring', 'cmath', 'cctype'] },
+  sstream: { src: sstream, deps: ['iostream', 'string', 'core', 'utility', 'exception', 'cstdio', 'cstdlib', 'cstring', 'cmath', 'cctype'] },
 };
 
 /** header name -> chunk */
 const HEADERS: Record<string, string> = {
-  algorithm: 'algorithm', numeric: 'algorithm', iterator: 'algorithm', utility: 'utility', type_traits: 'utility', functional: 'utility',
+  algorithm: 'algorithm', numeric: 'algorithm', iterator: 'algorithm', utility: 'utility', type_traits: 'utility', functional: 'functional', tuple: 'functional', optional: 'functional',
   exception: 'exception', stdexcept: 'exception', new: 'exception', string: 'string', vector: 'vector', array: 'array', deque: 'deque', stack: 'deque', queue: 'deque', memory: 'memory', map: 'tree', set: 'tree',
-  iostream: 'iostream', istream: 'iostream', ostream: 'iostream', iomanip: 'iostream',
+  iostream: 'iostream', istream: 'iostream', ostream: 'iostream', iomanip: 'iostream', sstream: 'sstream', limits: 'limits',
   cstdio: 'cstdio', 'stdio.h': 'cstdio', cstdlib: 'cstdlib', 'stdlib.h': 'cstdlib', cstring: 'cstring', 'string.h': 'cstring',
   cmath: 'cmath', 'math.h': 'cmath', cctype: 'cctype', 'ctype.h': 'cctype', cassert: 'cassert', 'assert.h': 'cassert',
 };

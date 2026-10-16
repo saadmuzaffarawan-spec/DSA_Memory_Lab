@@ -37,8 +37,8 @@ export function getSig(I: Interp, fn: Fn): Sig {
       const te = p.type.k === 'pack' ? p.type.of : p.type;
       if (p.pack || p.type.k === 'pack') {
         const nm = firstPackName(I, te, fn);
-        const ent = nm ? fn.bindings?.get(nm) : undefined;
-        const items = ent && ent.k === 'pack' ? ent.items : [];
+        const ent = nm ? packOf(I, fn, nm) : undefined;
+        const items = ent ? ent.items : [];
         fn.packInfo = { name: p.name ?? '', start: params.length, count: items.length };
         items.forEach((it, i) => {
           const b = new Map<string, TArgVal>([[nm!, it]]);
@@ -69,6 +69,15 @@ export function getSig(I: Interp, fn: Fn): Sig {
 
 const AUTO_T: Type = { k: 'void', auto: true } as any;
 
+/** a template parameter pack visible to a function: its own, or one of the enclosing class template */
+function packOf(I: Interp, fn: Fn, name: string): { k: 'pack'; items: TArgVal[] } | undefined {
+  const own = fn.bindings?.get(name);
+  if (own && own.k === 'pack') return own;
+  const lk = lookupUnqualified(I, name, fn.scope);
+  const e = lk?.ents.find((x) => x.k === 'pack');
+  return e && e.k === 'pack' ? { k: 'pack', items: e.items } : undefined;
+}
+
 function firstPackName(I: Interp, te: A.TypeExpr, fn: Fn): string | null {
   let found: string | null = null;
   const visit = (t: A.TypeExpr) => {
@@ -78,7 +87,7 @@ function firstPackName(I: Interp, te: A.TypeExpr, fn: Fn): string | null {
         const b = t.spec.base;
         if (b.k === 'name') {
           for (const p of b.q.parts) {
-            if (fn.bindings?.get(p.id)?.k === 'pack') { found = p.id; return; }
+            if (packOf(I, fn, p.id)) { found = p.id; return; }
             p.targs?.forEach((a) => { if (a.k !== 'expr') visit(a.t); });
           }
         }
@@ -196,7 +205,8 @@ export function rankConv(I: Interp, arg: V, P: Type): number | null {
     }
     if (at.k === 'cls' && target.k === 'cls' && isBaseOf(target.c, at.c)) return 3;
     const r = rankConv(I, arg, stripCv(target));
-    return r === null ? null : Math.max(r, 3);
+    // a temporary created by a conversion binds better to T&& than to const T&
+    return r === null ? null : Math.max(r, 3) + (P.rv ? 0 : 0.1);
   }
   // by value
   if (arg.k === 'init') {
@@ -211,6 +221,8 @@ export function rankConv(I: Interp, arg: V, P: Type): number | null {
       return arg.cands.some((f) => { const sg = getSig(I, f); return sg.params.length === ft.params.length && sg.params.every((p, i) => sameType(p, ft.params[i], true)); }) ? 1 : null;
     }
     if (P.k === 'bool') return 3;
+    // a function name converts to a class through a constructor that takes the decayed function pointer (std::function)
+    if (P0cls(P) && arg.cands.length === 1) return rankConv(I, I.mkPtr(fnType(I, arg.cands[0]), arg.cands[0].addr), P);
     return null;
   }
   if (arg.k === 'void' || arg.k === 'type' || arg.k === 'tmpl') return null;
@@ -577,6 +589,8 @@ function hasPadding(t: Type): boolean {
 // overload resolution
 // =====================================================================================================================
 interface Viable { fn: Fn; ranks: number[]; selfRank: number; isTmpl: boolean; spec: number }
+
+const P0cls = (t: Type) => stripCv(t).k === 'cls';
 
 function argDesc(I: Interp, a: V): string {
   switch (a.k) {
@@ -1293,7 +1307,7 @@ function declareParams(I: Interp, fn: Fn, sig: Sig, self: Extract<V, { k: 'l' }>
   });
   if (fn.packInfo && packName) {
     const bind = fn.bindings?.get(firstBindingPack(fn)) as any;
-    scope.names.set(packName, [{ k: 'pack', items: bind && bind.k === 'pack' ? bind.items : [], vals: packVals }]);
+    scope.names.set(packName, [{ k: 'pack', items: bind && bind.k === 'pack' ? bind.items : packVals.map((v) => ({ k: 'type', t: (v as any).t })), vals: packVals }]);
   }
 }
 

@@ -254,8 +254,26 @@ export function lookupQName(I: Interp, q: A.QName, scope: Scope, opts: { needTyp
 // ---- template arguments -------------------------------------------------------------------------------------------------------
 export function evalTArgs(I: Interp, targs: A.TArg[], scope: Scope): TArgVal[] {
   const out: TArgVal[] = [];
-  for (const a of targs) {
+  for (const a0 of targs) {
+    const a: A.TArg = a0.k === 'type' && a0.t.k === 'pack' ? { k: 'pack', t: a0.t.of } : a0;
     if (a.k === 'pack') {
+      // a pattern that merely contains a pack (T&..., const T&..., typename X<T>::type...) is expanded once per element
+      const names = packNamesIn(I, a.t, scope);
+      if (names.length === 1 && isBarePackType(a.t) && I.packIdx.get(names[0]) === undefined) {
+        const bare = lookupUnqualified(I, names[0], scope)!.ents.find((e) => e.k === 'pack');
+        if (bare && bare.k === 'pack') { out.push(...bare.items); continue; }
+      }
+      if (names.length && !isBarePackType(a.t)) {
+        const lens = names.map((n) => { const ent = lookupUnqualified(I, n, scope)!.ents.find((e) => e.k === 'pack'); return ent && ent.k === 'pack' ? ent.items.length : 0; });
+        const saved = new Map(I.packIdx);
+        try {
+          for (let i = 0; i < lens[0]; i++) {
+            for (const nm of names) I.packIdx.set(nm, i);
+            out.push({ k: 'type', t: resolveTypeExpr(I, a.t, scope) });
+          }
+        } finally { I.packIdx = saved; }
+        continue;
+      }
       const t = resolveTypeExpr(I, a.t, scope);
       if (t.k === 'void' && (t as any).pack) out.push(...((t as any).pack as TArgVal[])); else out.push({ k: 'type', t });
       continue;
@@ -410,3 +428,27 @@ export function isSameClassOrDerived(a: ClassInfo, b: ClassInfo) { return isBase
 
 export { sameType, stripCv, typeStr, constOf, isInt };
 export type { Fn, FuncTemplate, ClassTemplate };
+
+
+/** names of template parameter packs mentioned anywhere in a type expression */
+function packNamesIn(I: Interp, te: unknown, scope: Scope, out: Set<string> = new Set()): string[] {
+  const walk = (o: unknown) => {
+    if (!o || typeof o !== 'object') return;
+    if (Array.isArray(o)) { o.forEach(walk); return; }
+    const r = o as Record<string, unknown>;
+    if (typeof r.id === 'string') {
+      const lk = lookupUnqualified(I, r.id, scope);
+      if (lk && lk.ents.some((e) => e.k === 'pack')) out.add(r.id);
+    }
+    for (const k of Object.keys(r)) if (k !== 'pos') walk(r[k]);
+  };
+  walk(te);
+  return [...out];
+}
+
+/** `T...` where the pattern is just the pack's own name, possibly with a cv-qualifier: handled by the original code path */
+function isBarePackType(te: A.TypeExpr): boolean {
+  if (te.k !== 'base') return false;
+  const b = te.spec.base;
+  return b.k === 'name' && b.q.parts.length === 1 && !b.q.parts[0].targs;
+}

@@ -81,7 +81,8 @@ export function deduceType(I: Interp, pat: A.TypeExpr, actual: Type, params: Set
           // find the template instance in the class or its bases
           const inst = findTemplateInstance(actual.c, ent.t);
           if (!inst) return false;
-          return deduceArgs(I, last.targs, inst.x.tmplArgs as TArgVal[], params, b, scope);
+          const flat = (xs: TArgVal[]): TArgVal[] => xs.flatMap((x) => (x.k === 'pack' ? flat(x.items) : [x]));
+          return deduceArgs(I, last.targs, flat(inst.x.tmplArgs as TArgVal[]), params, b, scope);
         }
       }
       // non-dependent: resolve and compare
@@ -108,6 +109,18 @@ export function deduceType(I: Interp, pat: A.TypeExpr, actual: Type, params: Set
     case 'fn': {
       if (actual.k !== 'fn') return false;
       if (!deduceType(I, pat.ret, actual.ret, params, b, scope)) return false;
+      // a trailing pack parameter (R(Args...)) swallows the remaining parameter types
+      const lastP = pat.params[pat.params.length - 1];
+      if (lastP && (lastP.pack || lastP.type.k === 'pack')) {
+        const inner = lastP.type.k === 'pack' ? lastP.type.of : lastP.type;
+        const fixed = pat.params.length - 1;
+        if (actual.params.length < fixed) return false;
+        if (!pat.params.slice(0, fixed).every((p, i) => deduceType(I, p.type, actual.params[i], params, b, scope))) return false;
+        if (inner.k === 'base' && inner.spec.base.k === 'name' && params.has(inner.spec.base.q.parts[0].id)) {
+          return bind(b, inner.spec.base.q.parts[0].id, { k: 'pack', items: actual.params.slice(fixed).map((t) => ({ k: 'type' as const, t })) });
+        }
+        return false;
+      }
       if (pat.params.length !== actual.params.length) return false;
       return pat.params.every((p, i) => deduceType(I, p.type, actual.params[i], params, b, scope));
     }

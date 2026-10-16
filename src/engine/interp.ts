@@ -42,6 +42,9 @@ export class Interp {
   out = '';
   stdin = '';
   stdinPos = 0;
+  /** in-memory streams (stringstream): id >= 100 -> text and read position */
+  sstreams = new Map<number, { text: string; pos: number }>();
+  nextSid = 100;
   exitCode: number | null = null;
   typeInfo: Record<number, TypeNode> = {};
   allFns: Fn[] = [];
@@ -360,8 +363,8 @@ export class Interp {
   lastLine = '';
   /** a scratch area in the C library page, used by natives that hand a string back to prelude code */
   scratchBuffer(n: number): number {
-    const base = this.plat.libc.base + 0x1000;
-    if (n > 0x1000) this.cerr('internal: scratch buffer too small');
+    const base = this.plat.libc.base + 0x2000; // second half of the C library page: keeps clear of the allocator's arena
+    if (n > 0x2000) this.cerr('internal: scratch buffer too small');
     return base;
   }
 

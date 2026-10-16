@@ -1000,7 +1000,12 @@ function execReturn(I: Interp, s: Extract<A.Stmt, { k: 'return' }>): Completion 
     if (cv.k === 'i' && cv.t.k === 'ptr') warnDangling(I, Number(cv.v), 'pointer', s.pos);
     I.retVal = cv;
     return RETURN;
-  } finally { releaseTemps(I, mark); }
+  } finally {
+    // destroying temporaries can run library functions, and a function that returns clears I.retVal: keep ours
+    const pending = I.retVal;
+    releaseTemps(I, mark);
+    I.retVal = pending;
+  }
 }
 
 function isLocalObject(I: Interp, addr: number): boolean {
