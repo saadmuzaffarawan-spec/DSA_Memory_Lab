@@ -11,7 +11,7 @@ import { baseOffsetOf, isAuto, isBaseOf, lookupQName, lookupUnqualified, resolve
 import { binaryValues, condValue, evalExpr, evalExprInto, lvalueOf, thisFor, typeOfExpr, unevaluated, indexValue, collectBindingFields, fieldLv, evalArgs } from './expr';
 import {
   bindRef, callOperator, callFnValue, construct, convertTo, destroyObj, ensureRet, getSig, hasNontrivialDtor, initFromBraces, initFromExpr, markBuilt, newTempObj,
-  prepareStorage, releaseTemps, tempMark, upcastAddr, valueInit, initFieldDefault, initFieldFromValue, isDerivedPtrConv, adoptTemp,
+  prepareStorage, makeInitializerList, releaseTemps, tempMark, upcastAddr, valueInit, initFieldDefault, initFieldFromValue, isDerivedPtrConv, adoptTemp,
 } from './call';
 import { completeArrayType, declare, declaredType, getVtabs, initDeclared, checkStaticAssert } from './decls';
 
@@ -725,6 +725,13 @@ function execRangeFor(I: Interp, s: Extract<A.Stmt, { k: 'rfor' }>): Completion 
     // bind the range: auto&& __range = expr;
     let range: Extract<V, { k: 'l' }>;
     if (rv0.k === 'l') range = rv0;
+    else if (rv0.k === 'init' && rv0.node.k === 'init') {
+      // for (int x : {1, 2, 3}) — the braced list becomes a std::initializer_list<T>
+      const its = rv0.node.items;
+      const first = its.length ? unevaluated(I, () => evalExpr(I, its[0])) : null;
+      const et = first && (first.k === 'i' || first.k === 'f' || first.k === 'l') ? stripCv(first.t) : I.T.int;
+      range = makeInitializerList(I, I.initListType(et), its) as Extract<V, { k: 'l' }>;
+    }
     else range = lvalueOf(I, I.cerr('range expression must be an object') as never);
     if (range.tmp) {
       const t = adoptTemp(I, range.a);

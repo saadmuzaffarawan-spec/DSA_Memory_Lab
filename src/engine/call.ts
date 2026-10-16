@@ -268,6 +268,15 @@ function userConvertible(I: Interp, arg: V, P: Extract<Type, { k: 'cls' }>): boo
       if (r !== null && r <= 3) return true;
     }
   }
+  // converting constructor templates:  template <class U> Foo(const Bar<U>&)
+  for (const t of (P.c.x.ctorTemplates as FuncTemplate[])) {
+    if (t.decl.explicit || t.decl.params.length !== 1) continue;
+    const at = valueType(arg);
+    if (!at) continue;
+    try {
+      if (deduceFunction(I, t.decl, t.scope, [], [{ t: at, lv: arg.k === 'l' && !isRvalue(arg) }])) return true;
+    } catch { /* not viable */ }
+  }
   return !!findConversionFn(I, arg, P);
 }
 

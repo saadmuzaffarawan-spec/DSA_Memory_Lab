@@ -646,7 +646,7 @@ export class Parser {
       // last component?
       if (!(nx && nx.k === 'op' && (nx.s === '::' || (nx.s === '<' && this.ctx.templNames.has(tk.s))))) {
         // end of qualified chain
-        if (this.ctx.typeNames.has(tk.s) || this.ctx.templNames.has(tk.s)) {
+        if (this.ctx.typeNames.has(tk.s) || (this.ctx.templNames.has(tk.s) && !this.ctx.funcTempls.has(tk.s))) {
           // `Foo(` directly inside class Foo, or `Foo::Foo(` anywhere, names a constructor, not a type
           if (nx && nx.k === 'op' && nx.s === '(' && (tk.s === prevId || (inClass && tk.s === this.currentClassName()) || (this.className.length > 0 && tk.s === this.currentClassName() && prevId === ''))) return false;
           return true;
