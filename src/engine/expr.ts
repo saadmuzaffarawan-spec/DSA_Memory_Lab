@@ -574,6 +574,12 @@ function evalCond(I: Interp, e: Extract<A.Expr, { k: 'cond' }>, dest?: number): 
   const chosen = c ? e.a : e.b;
   const other = c ? e.b : e.a;
   const v = I.uneval ? evalExpr(I, chosen) : dest !== undefined ? evalExprInto(I, chosen, dest) : evalExpr(I, chosen);
+  if (v.k === 'l' && v.t.k !== 'cls' && v.t.k !== 'arr' && v.t.k !== 'fn' && !v.tmp) {
+    // both operands lvalues of the same type: the result is an lvalue too (so  &(c ? a : b)  and  (c ? a : b) = 1  work)
+    let o2: V | null = null;
+    try { o2 = unevaluated(I, () => evalExpr(I, other)); } catch { o2 = null; }
+    if (o2 && o2.k === 'l' && !o2.tmp && sameType(stripCv(o2.t), stripCv(v.t), true)) return v;
+  }
   const x = v.k === 'l' && v.t.k !== 'cls' && v.t.k !== 'arr' && v.t.k !== 'fn' ? I.rv(v) : v;
   if (x.k === 'i' || x.k === 'f') {
     // convert to the common type of both branches

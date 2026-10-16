@@ -318,7 +318,7 @@ export function resolveSpec(I: Interp, spec: A.TSpec, scope: Scope): Type {
         I.cerr(`'${n}' does not name a type (it was not declared in this scope)`, spec.pos);
       }
       const ent = r.ents.find((e) => e.k === 'type') ?? r.ents.find((e) => e.k === 'ctempl') ?? r.ents.find((e) => e.k === 'tval' || e.k === 'enumc');
-      if (!ent) I.cerr(`'${q.parts.map((p) => p.id).join('::')}' does not name a type`, spec.pos);
+      if (!ent) { if (process.env.DBGR) console.error('ENTS', r.ents.map((e) => e.k)); I.cerr(`'${q.parts.map((p) => p.id).join('::')}' does not name a type`, spec.pos); }
       if (ent.k === 'type') t = ent.type;
       else if (ent.k === 'ctempl') {
         // class template without arguments: injected-class-name inside the template itself, or class-template argument deduction

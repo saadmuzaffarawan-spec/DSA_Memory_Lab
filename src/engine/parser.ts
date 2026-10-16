@@ -230,6 +230,7 @@ export class Parser {
   private parseTemplateParams(): TemplateParam[] {
     this.expect('<');
     const ps: TemplateParam[] = [];
+    const tmpNames: string[] = [];
     this.noGt++;
     while (!this.isOp('>') && !this.isOp('>>')) {
       if (this.isId('typename') || this.isId('class')) {
@@ -239,6 +240,7 @@ export class Parser {
         let def: TypeExpr | undefined;
         if (this.accept('=')) def = this.parseTypeId();
         ps.push({ kind: 'type', name, def, pack });
+        if (name && !this.ctx.typeNames.has(name)) { this.ctx.typeNames.add(name); tmpNames.push(name); }
       } else if (this.isId('template')) {
         this.p++;
         this.parseTemplateParams();
@@ -260,6 +262,7 @@ export class Parser {
       if (!this.accept(',')) break;
     }
     this.noGt--;
+    for (const n of tmpNames) this.ctx.typeNames.delete(n);
     this.closeAngle();
     return ps;
   }

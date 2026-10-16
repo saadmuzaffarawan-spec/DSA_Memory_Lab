@@ -875,7 +875,7 @@ function memberMethod(I: Interp, c: ClassInfo, f: A.FuncDecl, cs: Scope) {
   // method templates
   if (f.tparams) {
     const tmpl: FuncTemplate = { kind: 'func', decl: f, scope: cs, cls: c, name, instances: new Map(), specs: new Map() };
-    if (f.isCtor) { x.ctorTemplates.push(tmpl); if (x.tmplOrigin === undefined) { /* fallthrough */ } }
+    if (f.isCtor) { x.ctorTemplates.push(tmpl); return; } // constructors are never found by name lookup
     fnsEntOf(cs, name).ftempls.push(tmpl);
     return;
   }

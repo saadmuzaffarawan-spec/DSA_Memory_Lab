@@ -68,7 +68,7 @@ export function deduceType(I: Interp, pat: A.TypeExpr, actual: Type, params: Set
         if (parts.length === 1 && params.has(last.id) && !last.targs) {
           let t = actual;
           // `const T` pattern strips the const from the actual type
-          if (spec.const && actual.const) t = stripCv(actual) as Type; else if (spec.const && !actual.const) return false;
+          if (spec.const && actual.const) t = stripCv(actual) as Type;
           return bind(b, last.id, { k: 'type', t });
         }
         // class template instance  C<args>
@@ -94,8 +94,8 @@ export function deduceType(I: Interp, pat: A.TypeExpr, actual: Type, params: Set
       return deduceType(I, pat.to, actual.to, params, b, scope);
     }
     case 'ref': {
-      if (actual.k === 'ref') return deduceType(I, pat.to, actual.to, params, b, scope);
-      return deduceType(I, pat.to, actual, params, b, scope);
+      if (actual.k !== 'ref' || !!actual.rv !== !!pat.rv) return false;
+      return deduceType(I, pat.to, actual.to, params, b, scope);
     }
     case 'arr': {
       if (actual.k !== 'arr') return false;
@@ -230,12 +230,25 @@ export function deduceFunction(
     if (ai >= args.length) break; // default arguments cover the rest
     const a = args[ai++];
     if (!mentionsParams(pt, params)) continue;
+    if (nonDeduced(pt)) continue; // e.g. typename remove_reference<T>::type& : T must come from elsewhere
     // already-explicit parameters make the pattern non-deduced
     if (!deduceParam(I, pt, a, params, b, defScope)) return null;
   }
   // defaults and completeness
   const full = fillDefaults(I, tparams, b, defScope);
   return full;
+}
+
+/** a nested-name-specifier that depends on a parameter (X<T>::type) is a non-deduced context */
+function nonDeduced(te: A.TypeExpr): boolean {
+  switch (te.k) {
+    case 'base': {
+      const b = te.spec.base;
+      return b.k === 'name' && b.q.parts.length > 1 && b.q.parts.slice(0, -1).some((p) => !!p.targs);
+    }
+    case 'ref': case 'ptr': return nonDeduced(te.to);
+    default: return false;
+  }
 }
 
 function baseNameOfPattern(te: A.TypeExpr): string | null {
